@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Registration</title>
+	<!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"> -->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js">
+	</script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+	<link rel="stylesheet" href="./regg.css">
+
+
+	<script type="text/javascript">
+		$(document).ready(function(){
+			$( "#form1" ).submit(function(event) {
+				event.preventDefault();
+				$.ajax({
+					type: 'POST',
+					url: '/reg',
+					data: $('#form1').serialize(),
+					dataType: "json",
+					success: function(response){
+						$('#form1')[0].reset();
+						document.getElementById("check").innerHTML=response.Success;
+         					//ADD THIS CODE
+         					setTimeout(function(){
+         						document.getElementById("check").innerHTML="";
+         					},3000);
+         					if (response.Success=="You are regestered,You can login now.") {
+         						document.getElementById("aa").click();
+         					};
+         				},
+         				error: function() {
+         				}
+         			})
+			});
+		});
+	</script>
+</head>
+<body>
+	<div class="container">
+        <div class="login">
+           <div class="container">
+                <h1>Register Now</h1>
+                <form id="form1"  method="post">
+                    <input type="email" name="email" placeholder="E-mail" required="" class="form-control"><br/>
+                    <input type="text" name="username" placeholder="Username" required="" class="form-control"><br/>
+					
+                    <input type="password" name="password" placeholder="Password" required="" class="form-control"><br/>
+                    <input type="password" name="passwordConf" placeholder="Confirm Password" required="" class="form-control"><br/>
+                    <p>Already registerd? </p>
+                    <a href="/">Login</a>
+                    <br>
+                    <br>
+                    <input type="submit" value="Register" class="btn btn-success">
+                </form>
+                <div class="clearfix"></div>
+           </div>
+        </div>
+        <div class="mssg bg-danger">
+			<span id="check"></span>
+		</div>
+        <div id="LangTable"><a href="/" id="aa"></a>
+		</div>
+        <div class="register">
+            <div class="container">
+                <i class="fas fa-user-plus fa-5x"></i>
+                <h2>Hello,friend!</h2>
+                <p>Enter your personal details and start your investing journey with us.</p>
+                <p>Create your own portfolio and strengthen your investing.</p>
+            </div>
+        </div>  
+      </div>
+</body>
+</html>
