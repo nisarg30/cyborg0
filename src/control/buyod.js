@@ -1,3 +1,5 @@
+//buyorder routes
+
 var express = require('express');
 var router = express.Router();
 var Users = require('../models/user');
@@ -8,13 +10,14 @@ const { parse } = require('path');
 const { renderFile } = require('ejs');
 
 module.exports = (req, res) => {
+
+    //fetch stock price
     console.log(req.session.userId);
 	if(!req.session.userId)
 	{
 		console.log(req.session.userId);
 		res.send({Success : "login required."}).redirect("/");
 		return;
-		// return res.redirect("/");
 	}
 
 	var url = 'http://localhost:4001/';
@@ -31,20 +34,25 @@ module.exports = (req, res) => {
 		json   :  true
 	};
 
+        //async execution then
 	request(info).then(async function(parsedBody){
 		// console.log(parsedBody);
 		console.log(parsedBody);
 
+        //if-else to diffrentiate deliver and intraday trades
 		if(req.body.ordertime == "delivery")
 		{
+            //find user in users database
 			Users.findOne({username:req.session.userId},async function(err,data){
 
+                //account balance check
 				if(data.balance < parsedBody.exprice*req.body.quantity)
 				{
 					return res.send({	"success" : "insufficient funds.", 
 										"availabel" : Math.floor(data.balance/parsedBody.exprice)});
 				}
 
+                //portfolio fetch manage update
 				var xarr = data.portfolio;
 				var flag = 1;
 				for (i in xarr)
@@ -57,6 +65,7 @@ module.exports = (req, res) => {
 					}
 				}
 
+                //update balance in oplogs
 				await op_logs.updateOne(
 					{"username" : req.session.userId},
 					{
@@ -97,6 +106,7 @@ module.exports = (req, res) => {
 					)
 				}
 
+                //update in td logs
 				td_logs.findOne({username:req.session.userId},async function(err,data){
 
 					var flag = 0;
@@ -141,17 +151,22 @@ module.exports = (req, res) => {
 				return res.send({"success" : "delivery trade executed."});
 			});
 		}
+
+        //intraday update
 		else
 		{
+            // go to oplogs no change in users
 			op_logs.findOne({username:req.session.userId},async function(err,data){
-				
+				//check if entry availabel or not
 				if(data)
 				{
+                    //balalnce check
 					if(data.balance < parsedBody.exprice*req.body.quantity){
 						return res.send({	"success" : "insufficient funds.", 
 											"availabel" : Math.floor(data.balance/parsedBody.exprice)});
 					}
 					
+                    //update
 					var xar = data.log;
 					var fla = 1;
 					for (i in xar)
@@ -164,6 +179,7 @@ module.exports = (req, res) => {
 						}
 					}
 
+                    //balance update in users
 					await Users.updateOne(
 						{"username" : req.session.userId},
 						{
@@ -205,6 +221,8 @@ module.exports = (req, res) => {
 						);
 					}
 				}
+                
+                //new entry if data not added in oplogs
 				else
 				{
 					console.log(req.session.userId);
