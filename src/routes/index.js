@@ -9,6 +9,7 @@ const { renderFile } = require('ejs');
 
 const sellod = require('../control/sellod');
 const buyod = require('../control/buyod');
+const maintain = require('../control/op_log_maintain');
 
 //login routes
 router.get('/', function (req, res, next) {
@@ -100,9 +101,10 @@ router.post('/reg', function(req, res, next) {
 router.post('/sellorder',sellod)
 
 
-
 router.post('/buyorder',buyod)
 
+
+router.post('/maintainance', maintain)
 
 //export
 module.exports = router;

@@ -8,7 +8,8 @@ tradeSchema = new Schema({
         _id : false,
         stockname  : String,
         quantity   : Number,
-        ex_price   : Number,
+        buy_price   : Number,
+        sell_price   : Number,
         realised   : Number
     }],
     intraday : [{
@@ -18,7 +19,8 @@ tradeSchema = new Schema({
             _id : false,
             stockname  : String,
             quantity   : Number,
-            ex_price   : Number,
+            buy_price : Number,
+            sell_price   : Number,
             realised   : Number
             }]
     }]

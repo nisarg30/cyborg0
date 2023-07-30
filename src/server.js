@@ -7,6 +7,8 @@ var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 var session = require('express-session');
 var MongoStore = require('connect-mongo')(session);
+var request = require('request-promise');
+var cron = require("node-cron")
 
 mongoose.set("strictQuery", false);
 mongoose.connect('mongodb+srv://nisargpatel0466:nn__4569@cluster0.lsqbqko.mongodb.net/cyborg0?retryWrites=true&w=majority', {
@@ -59,6 +61,24 @@ app.use(function (err, req, res, next) {
     res.send(err.message);
 });
 
+function requestschedule(){
+  var url = 'http://localhost:4000/maintainance';
+	
+	var info ={
+		method : 'POST',
+		uri    :  url,
+		body   :  {'permisiion': "execute!"},
+		json   :  true
+	};
+
+  request(info).then(async function(parsedBody){
+    console.log(parsedBody);
+  });
+}
+
+cron.schedule("51 12 * * *", function(){
+  requestschedule();
+});
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, function () {

@@ -120,7 +120,7 @@ module.exports = (req, res) => {
 							{
 								flag = 1;
 								xary[i].quantity = xary[i].quantity + req.body.quantity;
-								xary[i].ex_price =  (xary[i].buyprice*xary[i].quantity)+(parsedBody.exprice*req.body.quantity)/(req.body.quantity+xary[i].quantity);
+								xary[i].buy_price = ((xary[i].buy_price*xary[i].quantity)+(parsedBody.exprice*req.body.quantity))/(req.body.quantity+xary[i].quantity);
 							}
 						}
 	
@@ -130,7 +130,8 @@ module.exports = (req, res) => {
 							var stt = {
 								stockname : req.body.stockname,
 								quantity : req.body.quantity,
-								ex_price : parsedBody.exprice,
+								buy_price : parsedBody.exprice,
+								sell_price : 0,
 								realised : 0
 							}
 							xary.push(stt);
@@ -288,7 +289,7 @@ module.exports = (req, res) => {
 										flag2 = 1;
 										console.log("yess");
 										xara[i].logos[j].quantity = xara[i].logos[j].quantity + req.body.quantity;
-										xara[i].logos[j].ex_price = ((xara[i].logos[j].ex_price*xara[i].logos[j].quantity)+(parsedBody.exprice*req.body.quantity))/(req.body.quantity+xara[i].logos[j].quantity);
+										xara[i].logos[j].buy_price = ((xara[i].logos[j].buy_price*xara[i].logos[j].quantity)+(parsedBody.exprice*req.body.quantity))/(req.body.quantity+xara[i].logos[j].quantity);
 									}
 								}
 							}
@@ -300,7 +301,8 @@ module.exports = (req, res) => {
 							var sta = {
 								stockname : req.body.stockname,
 								quantity : req.body.quantity,
-								ex_price : parsedBody.exprice,
+								buy_price : parsedBody.exprice,
+								sell_price : 0,
 								realised : 0
 							};
 							xara[index].logos.push(sta);
@@ -310,10 +312,12 @@ module.exports = (req, res) => {
 						{
 							console.log("xxx");
 							var d = new Date().toLocaleDateString();
+							// var d = "26/05/2023";
 							var y = [{
 								stockname : req.body.stockname,
 								quantity  : req.body.quantity,
-								ex_price  : parsedBody.exprice,
+								buy_price  : parsedBody.exprice,
+								sell_price : 0,
 								realised  : 0,
 							}];
 		

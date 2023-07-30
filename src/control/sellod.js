@@ -99,7 +99,8 @@ module.exports = (req, res) => {
 						if(array[i].stockname == req.body.stockname)
 						{
 							array[i].quantity = array[i].quantity - req.body.quantity;
-							array[i].realised = array[i].realised + req.body.quantity*(parsedBody.exprice-array[i].ex_price);
+							array[i].sell_price = ((array[i].sell_price*array[i].quantity)+(parsedBody.exprice*req.body.quantity))/(req.body.quantity+xary[i].quantity);
+							array[i].realised = (array[i].sell_price - array[i].buy_price) * array[i].quantity;
 							break;
 						}
 					}
@@ -182,14 +183,18 @@ module.exports = (req, res) => {
 					var array = data.intraday;
 					for(i in array)
 					{
-						for(j in array[i].logos)
-						{
-							if(array[i].logos[j].stockname == req.body.stockname)
-							{
-								array[i].logos[j].quantity  = array[i].logos[j].quantity - req.body.quantity;
-								array[i].logos[j].realised  = array[i].logos[j].realised + req.body.quantity*(parsedBody.exprice - array[i].logos[j].ex_price);
-							}
-						}
+						if(array[i].date == new Date().toLocaleDateString() ){
+                            
+                            for(j in array[i].logos)
+						    {
+							    if(array[i].logos[j].stockname == req.body.stockname)
+							    {
+								    array[i].logos[j].quantity  = array[i].logos[j].quantity - req.body.quantity;
+									array[i].logos[j].sell_price = ((array[i].logos[j].sell_price*array[i].logos[j].quantity)+(parsedBody.exprice*req.body.quantity))/(req.body.quantity+array[i].logos[j].quantity); 
+								    array[i].logos[j].realised  = (array[i].logos[j].sell_price - array[i].logos[j].buy_price) * array[i].logos[j].quantity;
+							    }
+						    }
+                        }
 					}
 
 					await td_logs.updateOne(
