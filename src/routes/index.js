@@ -10,7 +10,8 @@ const { renderFile } = require('ejs');
 const sellod = require('../control/sellod');
 const buyod = require('../control/buyod');
 const maintain = require('../control/op_log_maintain');
-
+// const demo = require('../../../cyborg0/demo');
+const { buy_handle, sell_handle } = require('../control/limit_order'); 
 //login routes
 router.get('/', function (req, res, next) {
 	return res.render('login.ejs');
@@ -106,5 +107,30 @@ router.post('/buyorder',buyod)
 
 router.post('/maintainance', maintain)
 
+router.post('/limit', async function(req, res, next) {
+
+	console.log(req.session.userId);
+	if(!req.session.userId)
+	{
+		console.log(req.session.userId);
+		return res.send({Success : "login required."});
+	}
+	
+	const order = {
+		username : req.body.username,
+		exprice : req.body.exprice,
+		quantity : req.body.quantity,
+		ordertime : req.body.ordertime,
+		direction : "BUY"
+	}
+	console.log(req.body.stockname);
+	if(req.body.direction == "BUY"){
+		await buy_handle(order);
+	}
+	else{
+		await sell_handle(order);
+	}
+	res.send("sucess");
+});
 //export
 module.exports = router;

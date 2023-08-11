@@ -61,24 +61,24 @@ app.use(function (err, req, res, next) {
     res.send(err.message);
 });
 
-function requestschedule(){
-  var url = 'http://localhost:4000/maintainance';
+// function requestschedule(){
+//   var url = 'http://localhost:4000/maintainance';
 	
-	var info ={
-		method : 'POST',
-		uri    :  url,
-		body   :  {'permisiion': "execute!"},
-		json   :  true
-	};
+// 	var info ={
+// 		method : 'POST',
+// 		uri    :  url,
+// 		body   :  {'permisiion': "execute!"},
+// 		json   :  true
+// 	};
 
-  request(info).then(async function(parsedBody){
-    console.log(parsedBody);
-  });
-}
+//   request(info).then(async function(parsedBody){
+//     console.log(parsedBody);
+//   });
+// }
 
-cron.schedule("51 12 * * *", function(){
-  requestschedule();
-});
+// cron.schedule("51 12 * * *", function(){
+//   requestschedule();
+// });
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, function () {

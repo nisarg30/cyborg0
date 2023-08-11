@@ -1,10 +1,5 @@
 const TradingView = require('@mathieuc/tradingview');
 
-async function call(x){
-    console.log(x);
-    return x;
-}
-
 async function fetch(stn){
     
     // console.log(stn);
@@ -28,13 +23,13 @@ async function fetch(stn){
         console.log(chart.infos.name, 'loaded !');
         // console.log('OK', chart.periods);
         // console.log(chart.periods[0].close);
-        let x = call(chart.periods[0].close);
-        // console.log(x);
-        // client.end();
+        // let x = call(chart.periods[0].close);
+        console.log(chart.periods[0].close);
+        client.end();
     });
 }
 
-var array = ["SBIN", "TCS", "TEJASNET","RELIANCE"];
+var array = ["SBIN", "TCS", "TEJASNET","RELIANCE","INDUSINDBK"];
 array.map(async (e) => {
     await fetch(e);
 })

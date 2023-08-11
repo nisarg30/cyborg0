@@ -3,37 +3,19 @@ var router = express.Router();
 var Users = require('../models/user');
 var op_logs = require('../models/open_trades');
 var td_logs = require('../models/trade_log');
-var request = require('request-promise');
-const { parse } = require('path');
-const { renderFile } = require('ejs');
+const fetch123 = require('../utls/s_price');
 
-
-module.exports = (req, res) => {
+module.exports = async (req, res) => {
     if(!req.session.userId)
 	{
 		console.log(req.session.userId);
-		res.send({Success : "login required."}).redirect("/");
+		res.send({Success : "login required."});
 		return;
-		// return res.redirect("/");
 	}
 
-	var url = 'http://localhost:4001/';
-	// console.log(req.body);
-	if(req.body.ordertype  ==  "limit")
-		url += 'limitorder';
-	else
-		url += 'marketorder';
 	
-	var info ={
-		method : 'POST',
-		uri    :  url,
-		body   :  {'stockname': req.body.stockname},
-		json   :  true
-	};
-
-	request(info).then(async function(parsedBody){
-
-		console.log(parsedBody);
+	var exprice = await fetch123(req.body.stockname);
+	exprice = parseFloat(exprice);
 		if(req.body.ordertime == "delivery")
 		{
 			Users.findOne({username:req.session.userId},async function(err,data){
@@ -70,12 +52,12 @@ module.exports = (req, res) => {
 				{
 					return res.send({"success" : "you dont own this stock."});
 				}
-
+				console.log(data.balance + (req.body.quantity*exprice));
 				await Users.updateOne(
 					{ "username" : req.session.userId},
 					{
 						$set : {
-							balance : data.balance + (req.body.quantity*parsedBody.exprice),
+							balance : data.balance + (req.body.quantity*exprice),
 							portfolio : srr
 						}
 					}
@@ -85,7 +67,7 @@ module.exports = (req, res) => {
 					{ "username" : req.session.userId},
 					{
 						$set : {
-							balance : data.balance + (req.body.quantity*parsedBody.exprice),
+							balance : data.balance + (req.body.quantity*exprice),
 						}
 					}
 				);
@@ -98,9 +80,13 @@ module.exports = (req, res) => {
 					{
 						if(array[i].stockname == req.body.stockname)
 						{
-							array[i].quantity = array[i].quantity - req.body.quantity;
-							array[i].sell_price = ((array[i].sell_price*array[i].quantity)+(parsedBody.exprice*req.body.quantity))/(req.body.quantity+xary[i].quantity);
-							array[i].realised = (array[i].sell_price - array[i].buy_price) * array[i].quantity;
+							var tuy = {
+                                date : new Date().toLocaleDateString(),
+                                exprice: exprice,
+                                direction : "SELL",
+                                quantity : req.body.quantity
+                            }
+                            array[i].dlog.push(tuy);
 							break;
 						}
 					}
@@ -132,7 +118,7 @@ module.exports = (req, res) => {
 				var ind = 0;
 				for(i in str)
 				{
-					console.log(str[i]);
+					// console.log(str[i]);
 					if(str[i].stockname == req.body.stockname)
 					{
 						if(req.body.quantity > str[i].quantity)
@@ -163,7 +149,7 @@ module.exports = (req, res) => {
 					{ "username" : req.session.userId},
 					{
 						$set : {
-							balance : data.balance + (req.body.quantity*parsedBody.exprice),
+							balance : data.balance + (req.body.quantity*exprice),
 						}
 					}
 				);
@@ -172,7 +158,7 @@ module.exports = (req, res) => {
 					{ "username" : req.session.userId},
 					{
 						$set : {
-							balance : data.balance + (req.body.quantity*parsedBody.exprice),
+							balance : data.balance + (req.body.quantity*exprice),
 							log : str
 						}
 					}
@@ -189,8 +175,8 @@ module.exports = (req, res) => {
 						    {
 							    if(array[i].logos[j].stockname == req.body.stockname)
 							    {
-								    array[i].logos[j].quantity  = array[i].logos[j].quantity - req.body.quantity;
-									array[i].logos[j].sell_price = ((array[i].logos[j].sell_price*array[i].logos[j].quantity)+(parsedBody.exprice*req.body.quantity))/(req.body.quantity+array[i].logos[j].quantity); 
+                                    array[i].logos[j].quantity = (array[i].logos[j].quantity + req.body.quantity);
+									array[i].logos[j].sell_price = ((array[i].logos[j].sell_price*array[i].logos[j].quantity)+(exprice*req.body.quantity))/(array[i].logos[j].quantity); 
 								    array[i].logos[j].realised  = (array[i].logos[j].sell_price - array[i].logos[j].buy_price) * array[i].logos[j].quantity;
 							    }
 						    }
@@ -209,5 +195,7 @@ module.exports = (req, res) => {
 				return res.send("sell intraday exec!");
 			});
 		}
-	});
+	
 };
+
+

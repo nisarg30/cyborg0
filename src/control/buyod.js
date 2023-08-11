@@ -1,5 +1,4 @@
 //buyorder routes
-
 var express = require('express');
 var router = express.Router();
 var Users = require('../models/user');
@@ -8,37 +7,36 @@ var td_logs = require('../models/trade_log');
 var request = require('request-promise');
 const { parse } = require('path');
 const { renderFile } = require('ejs');
+const fetch123 = require('../utls/s_price');
 
-module.exports = (req, res) => {
+module.exports = async function (req, res){
 
     //fetch stock price
     console.log(req.session.userId);
 	if(!req.session.userId)
 	{
 		console.log(req.session.userId);
-		res.send({Success : "login required."}).redirect("/");
-		return;
+		return res.send({Success : "login required."});
 	}
 
-	var url = 'http://localhost:4001/';
-	// console.log(req.body);
-	if(req.body.ordertype  ==  "limit")
-		url += 'limitorder';
-	else
-		url += 'marketorder';
+	// var url = 'http://localhost:4001/';
+	// // console.log(req.body);
+	// if(req.body.ordertype  ==  "limit")
+	// 	url += 'limitorder';
+	// else
+	// 	url += 'marketorder';
 
-	var info ={
-		method : 'POST',
-		uri    :  url,
-		body   :  {'stockname': req.body.stockname},
-		json   :  true
-	};
+	// var info ={
+	// 	method : 'POST',
+	// 	uri    :  url,
+	// 	body   :  {'stockname': req.body.stockname},
+	// 	json   :  true
+	// };
 
         //async execution then
-	request(info).then(async function(parsedBody){
+	var exprice = await fetch123(req.body.stockname);
+	exprice = parseFloat(exprice);
 		// console.log(parsedBody);
-		console.log(parsedBody);
-
         //if-else to diffrentiate deliver and intraday trades
 		if(req.body.ordertime == "delivery")
 		{
@@ -46,10 +44,10 @@ module.exports = (req, res) => {
 			Users.findOne({username:req.session.userId},async function(err,data){
 
                 //account balance check
-				if(data.balance < parsedBody.exprice*req.body.quantity)
+				if(data.balance < exprice*req.body.quantity)
 				{
 					return res.send({	"success" : "insufficient funds.", 
-										"availabel" : Math.floor(data.balance/parsedBody.exprice)});
+										"availabel" : Math.floor(data.balance/exprice)});
 				}
 
                 //portfolio fetch manage update
@@ -60,7 +58,7 @@ module.exports = (req, res) => {
 					if(xarr[i].stockname == req.body.stockname)
 					{
 						flag = 0;
-						xarr[i].buyprice = (xarr[i].buyprice*xarr[i].quantity)+(parsedBody.exprice*req.body.quantity)/(req.body.quantity+xarr[i].quantity);
+						xarr[i].buyprice = (xarr[i].buyprice*xarr[i].quantity)+(exprice*req.body.quantity)/(req.body.quantity+xarr[i].quantity);
 						xarr[i].quantity = xarr[i].quantity + req.body.quantity;
 					}
 				}
@@ -70,7 +68,7 @@ module.exports = (req, res) => {
 					{"username" : req.session.userId},
 					{
 						$set : {
-							balance : data.balance - (req.body.quantity*parsedBody.exprice)
+							balance : data.balance - (req.body.quantity*exprice)
 						}
 					}
 				)
@@ -83,12 +81,12 @@ module.exports = (req, res) => {
 							$push : {
 								portfolio : {
 									stockname : req.body.stockname,
-									buy_price : parsedBody.exprice,
+									buy_price : exprice,
 									quantity : req.body.quantity
 								}
 							},
 							$set : {
-								balance : data.balance - (req.body.quantity*parsedBody.exprice)
+								balance : data.balance - (req.body.quantity*exprice)
 							}
 						}
 					);
@@ -99,7 +97,7 @@ module.exports = (req, res) => {
 						{"username" : req.session.userId},
 						{
 							$set : {
-								balance : data.balance - (req.body.quantity*parsedBody.exprice),
+								balance : data.balance - (req.body.quantity*exprice),
 								portfolio : xarr
 							}
 						}
@@ -119,8 +117,13 @@ module.exports = (req, res) => {
 							if(xary[i].stockname == req.body.stockname)
 							{
 								flag = 1;
-								xary[i].quantity = xary[i].quantity + req.body.quantity;
-								xary[i].buy_price = ((xary[i].buy_price*xary[i].quantity)+(parsedBody.exprice*req.body.quantity))/(req.body.quantity+xary[i].quantity);
+								var tuy = {
+									date : new Date().toLocaleDateString(),
+									ex_price: exprice,
+									direction : "BUY",
+									quantity : req.body.quantity
+								}
+								xary[i].dlog.push(tuy);
 							}
 						}
 	
@@ -129,10 +132,12 @@ module.exports = (req, res) => {
 							console.log("yyy");
 							var stt = {
 								stockname : req.body.stockname,
-								quantity : req.body.quantity,
-								buy_price : parsedBody.exprice,
-								sell_price : 0,
-								realised : 0
+								dlog : [{
+									date : new Date().toLocaleDateString(),
+									ex_price : exprice,
+									direction : "BUY",
+									quantity : req.body.quantity
+								}]
 							}
 							xary.push(stt);
 						}
@@ -143,7 +148,8 @@ module.exports = (req, res) => {
 								$set : {
 									delivery : xary
 								}
-							});
+							}
+						);
 					}
 					else{
 						console.log("else");
@@ -161,10 +167,10 @@ module.exports = (req, res) => {
 				//check if entry availabel or not
 				if(data)
 				{
-                    //balalnce check
-					if(data.balance < parsedBody.exprice*req.body.quantity){
+                    //balance check
+					if(data.balance < exprice*req.body.quantity){
 						return res.send({	"success" : "insufficient funds.", 
-											"availabel" : Math.floor(data.balance/parsedBody.exprice)});
+											"availabel" : Math.floor(data.balance/exprice)});
 					}
 					
                     //update
@@ -175,7 +181,7 @@ module.exports = (req, res) => {
 						if(xar[i].stockname == req.body.stockname)
 						{
 							fla = 0;
-							xar[i].buyprice = (xar[i].ex_price*xar[i].quantity)+(parsedBody.exprice*req.body.quantity)/(req.body.quantity+xar[i].quantity);
+							xar[i].buyprice = (xar[i].ex_price*xar[i].quantity)+(exprice*req.body.quantity)/(req.body.quantity+xar[i].quantity);
 							xar[i].quantity = xar[i].quantity + req.body.quantity;
 						}
 					}
@@ -185,7 +191,7 @@ module.exports = (req, res) => {
 						{"username" : req.session.userId},
 						{
 							$set :{
-								balance : data.balance - (req.body.quantity*parsedBody.exprice)
+								balance : data.balance - (req.body.quantity*exprice)
 							}
 						}
 					);
@@ -199,12 +205,12 @@ module.exports = (req, res) => {
 									log : { 
 										stockname : req.body.stockname,
 										quantity : req.body.quantity,
-										ex_price : parsedBody.exprice,
+										ex_price : exprice,
 										direction : req.body.direction,
 									}
 								},
 								$set :{
-									balance : data.balance - (req.body.quantity*parsedBody.exprice)
+									balance : data.balance - (req.body.quantity*exprice)
 								}
 							}
 						);
@@ -215,7 +221,7 @@ module.exports = (req, res) => {
 							{"username" : req.session.userId},
 							{
 								$set :{
-									balance : data.balance - (req.body.quantity*parsedBody.exprice),
+									balance : data.balance - (req.body.quantity*exprice),
 									log : xar
 								}
 							} 
@@ -230,11 +236,11 @@ module.exports = (req, res) => {
 					var rex;
 					Users.findOne({username:req.session.userId},async function(err,data)
 					{
-						rex = data.balance - (parsedBody.exprice*req.body.quantity);
+						rex = data.balance - (exprice*req.body.quantity);
 						if(rex < 0)
 						{
 							res.send({	"success" : "insufficient funds.", 
-										"availabel" : Math.floor(data.balance/parsedBody.exprice)});
+										"availabel" : Math.floor(data.balance/exprice)});
 							return;
 						}
 						console.log(rex);
@@ -245,7 +251,7 @@ module.exports = (req, res) => {
 							log : [{
 								stockname : req.body.stockname,
 								quantity : req.body.quantity,
-								ex_price : parsedBody.exprice,
+								ex_price : exprice,
 								direction : req.body.direction
 							}]
 						});
@@ -261,7 +267,7 @@ module.exports = (req, res) => {
 							{"username" : req.session.userId},
 							{
 								$set :{
-									balance : data.balance - (req.body.quantity*parsedBody.exprice)
+									balance : data.balance - (req.body.quantity*exprice)
 								}
 							} 
 						);
@@ -288,8 +294,7 @@ module.exports = (req, res) => {
 									{
 										flag2 = 1;
 										console.log("yess");
-										xara[i].logos[j].quantity = xara[i].logos[j].quantity + req.body.quantity;
-										xara[i].logos[j].buy_price = ((xara[i].logos[j].buy_price*xara[i].logos[j].quantity)+(parsedBody.exprice*req.body.quantity))/(req.body.quantity+xara[i].logos[j].quantity);
+										xara[i].logos[j].buy_price = ((xara[i].logos[j].buy_price*xara[i].logos[j].quantity)+(exprice*req.body.quantity))/(req.body.quantity+xara[i].logos[j].quantity);
 									}
 								}
 							}
@@ -300,8 +305,8 @@ module.exports = (req, res) => {
 							console.log("sss");
 							var sta = {
 								stockname : req.body.stockname,
-								quantity : req.body.quantity,
-								buy_price : parsedBody.exprice,
+								quantity : 0,
+								buy_price : exprice,
 								sell_price : 0,
 								realised : 0
 							};
@@ -315,8 +320,8 @@ module.exports = (req, res) => {
 							// var d = "26/05/2023";
 							var y = [{
 								stockname : req.body.stockname,
-								quantity  : req.body.quantity,
-								buy_price  : parsedBody.exprice,
+								quantity  : 0,
+								buy_price  : exprice,
 								sell_price : 0,
 								realised  : 0,
 							}];
@@ -337,6 +342,6 @@ module.exports = (req, res) => {
 				return res.send({"success" : "intraday trade executed."});
 			});
 		}
-	})
 	return;
 };
+
