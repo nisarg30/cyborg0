@@ -41,7 +41,7 @@ router.get('/reg', function (req, res, next) {
 	return res.render('reg.ejs');
 });
 
-router.post('/reg', function(req, res, next) {
+router.post('/reg', async function(req, res, next) {
 	console.log(req.body);
 	var personInfo = req.body;
 
@@ -50,6 +50,10 @@ router.post('/reg', function(req, res, next) {
 	} else {
 		if (personInfo.password == personInfo.passwordConf) {
 
+			const uemail = await Users.findOne({email:personInfo.email});
+			if (uemail){
+				return res.send({"syccess" : "email already in use"});
+			}
 			Users.findOne({username:personInfo.username},function(err,data){
 				if(!data){
 					

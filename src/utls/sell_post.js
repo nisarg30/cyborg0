@@ -1,15 +1,16 @@
 var Users = require('../models/user');
 var op_logs = require('../models/open_trades');
 var td_logs = require('../models/trade_log');
+const path = require('path');
+const fs = require('fs');
 
 module.exports = async function sell_limit_postexecution(order){
+
+    console.log("sell_limit_postexecution");
+    console.log(order);
     if(order.ordertime == "delivery"){
-        const user = await Users.findOneAndUpdate(
-            { username : order.username, 'portfolio.stockname': order.stockname },
-            {
-                $inc: { 'portfolio.$.quantity': -order.quantity }
-            },
-        );
+
+        const user = await Users.findOne({username : order.username});
             
         if (user.portfolio.some(item => item.stockname === order.stockname && item.quantity <= 0)) {
             await Users.findOneAndUpdate(
@@ -18,14 +19,18 @@ module.exports = async function sell_limit_postexecution(order){
             );
         }
 
+        const ot = order.exprice*order.quantity;
+        console.log(ot);
         await Users.findOneAndUpdate(
             { username : order.username },
-            { $inc: { balance: order.exprice*order.quantity } },
+            { $inc: { balance: ot } },
+            { new : true}
         );
 
         await op_logs.findOneAndUpdate(
             { username : order.username },
-            { $inc: { balance: order.exprice*order.quantity } },
+            { $inc: { balance: ot } },
+            { new : true}
         );
 
         const tdpush = {
@@ -35,19 +40,14 @@ module.exports = async function sell_limit_postexecution(order){
             direction : "SELL"
         };
 
-        const updatedTradeLog = await TradeLog.findOneAndUpdate(
+        const updatedTradeLog = await td_logs.findOneAndUpdate(
             { username : order.username, 'delivery.stockname': order.stockname },
             { $push: { 'delivery.$.dlog': tdpush } },
         );
     }
     else{
 
-        const user = await op_logs.findOneAndUpdate(
-            { username : order.username, 'log.stockname': order.stockname },
-            {
-                $inc: { 'log.$.quantity': -order.quantity }
-            },
-        );
+        const user = await op_logs.findOne({username: order.username});
             
         if (user.log.some(item => item.stockname === order.stockname && item.quantity <= 0)) {
             await op_logs.findOneAndUpdate(
@@ -90,6 +90,5 @@ module.exports = async function sell_limit_postexecution(order){
             }
         );
     }
-
     return ({"success" : "sell post limit exec"});
 }

@@ -8,28 +8,27 @@ const fetch123 = require('../utls/s_price');
 
 async function buy_handle(order){
 
-    const exprice = order.exprice;
-
+    const exprice = order.ex_price;
     const udata = await Users.findOne({username: order.username });
     if(udata){
         if(udata.balance < exprice*order.quantity)
 				{
-					return res.send({	"success" : "insufficient funds.", 
+					return ({	"success" : "insufficient funds.", 
 										"availabel" : Math.floor(udata.balance/exprice)});
 				}
     }
 
-    var order = {
+    var entry = {
         username: order.username,
         quantity: order.quantity,
-        ex_price: order.exprice,
+        ex_price: order.ex_price,
         ordertime : order.ordertime,
         direction : order.direction
     }
 
-    await limit.findOneAndUpdate(
+    limit.findOneAndUpdate(
         { stockname: order.stockname },
-        { $push: { log: order} },
+        { $push: { log: entry } },
         (err) => {
             if (err) {
                 console.error('Error updating log:', err);
@@ -47,6 +46,18 @@ async function buy_handle(order){
             }
         }
     );
+    
+    if(order.ordertime == 'intraday'){
+        const odata = await op_logs.findOne({username : order.username});
+        if(!odata) {
+            const newLogEntry = new op_logs({
+                username: order.username,
+                balance: udata.balance,
+                log: []
+            });
+            const savedLogEntry = await newLogEntry.save();
+        }
+    }
 
     await op_logs.updateOne(
         { "username" : order.username },
@@ -67,19 +78,19 @@ async function sell_handle(order) {
         const udata = await Users.findOne({
             "username" : order.username,
         });
-
+        // console.log(udata);
         const portfolioElement = udata.portfolio.find(item => item.stockname === order.stockname);
-
+        console.log(portfolioElement);
         if(!portfolioElement){
-            return res.send({"success" : "You don't own this stock"});
+            return ({"success" : "You don't own this stock"});
         }
         
         if(portfolioElement.quantity < order.quantity){
-            return res.send({"success" : "insufficient quantity", "available" : portfolioElement.quantity});
+            return ({"success" : "insufficient quantity", "available" : portfolioElement.quantity});
         }
 
         await Users.updateOne(
-            { "username" : req.session.userId, "portfolio.stockname" : order.stockname},
+            { "username" : order.username, "portfolio.stockname" : order.stockname},
             {
                 $inc : {
                     'portfolio.$.quantity': -order.quantity
@@ -100,10 +111,10 @@ async function sell_handle(order) {
                     username : order.username,
                     balance : udata.balance,
                     log : [{
-                        stockname : req.body.stockname,
-                        quantity : req.body.quantity,
+                        stockname : order.stockname,
+                        quantity : order.quantity,
                         ex_price : exprice,
-                        direction : req.body.direction
+                        direction : order.direction
                     }]
                 });
 
@@ -117,15 +128,15 @@ async function sell_handle(order) {
 
         const logElement = odata.log.find(item => item.stockname === stockName);
         if(!logElement){
-            return res.send({"success" : "You don't own this stock"});
+            return send({"success" : "You don't own this stock"});
         }
         
         if(logElement.quantity < order.quantity){
-            return res.send({"success" : "insufficient quantity", "available" : logElement.quantity});
+            return send({"success" : "insufficient quantity", "available" : logElement.quantity});
         }
 
         await op_logs.updateOne(
-            { "username" : req.session.userId, "log.stockname" : order.stockname},
+            { "username" : order.username, "log.stockname" : order.stockname},
             {
                 $inc : {
                     'log.$.quantity': -order.quantity
@@ -134,7 +145,7 @@ async function sell_handle(order) {
         );
     }
 
-    var order = {
+    var entry = {
         username: order.username,
         quantity: order.quantity,
         ex_price: order.exprice,
@@ -142,9 +153,9 @@ async function sell_handle(order) {
         direction : order.direction
     }
 
-    await limit.findOneAndUpdate(
+    limit.findOneAndUpdate(
         { stockname: order.stockname },
-        { $push: { log: order} },
+        { $push: { log: entry } },
         (err) => {
             if (err) {
                 console.error('Error updating log:', err);

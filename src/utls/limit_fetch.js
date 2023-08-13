@@ -56,7 +56,7 @@ async function read(stockname)
         WIPRO: '49'
     }
     var query = stockname.toUpperCase();
-    const data = await fs.readFile(path.resolve('utls/data.csv'), 'utf8');
+    const data = await fs.readFile(path.resolve('src/utls/data.csv'), 'utf8');
     const rows = data.split('\n');
     rows[obj[query]] = rows[obj[query]].split(',');
     return rows[obj[query]];

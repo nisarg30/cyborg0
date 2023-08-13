@@ -56,6 +56,10 @@ var obj = {
   WIPRO: 49
 }
 
+async function xyz(stn) {
+  const d = limitexe(stn);
+}
+
 async function fetch(stn){
 
     var passi =  "NSE:" + stn;
@@ -71,15 +75,16 @@ async function fetch(stn){
     
     chart.onUpdate(async () => {
         // console.log(chart.infos.name);
+        limitexe(chart.infos.name).then(async () => {
+          console.log("limitexe successfully updated");
+        });
         const x = await write(parseInt(obj[chart.infos.name]) ,chart.periods[0].close);
-        // const d = await limitexe(chart.infos.name);
-        // client.end();
     });
 }
 
 async function write(targetRow, newValue) {
 
-  const filePath = path.resolve('data.csv');
+  const filePath = path.resolve(__dirname,'data.csv');
   try {
     var data = await fs.readFile(filePath, 'utf8');
     var rows = data.trim().split('\n'); // Split by lines

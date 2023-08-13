@@ -1,56 +1,194 @@
 var express = require('express');
-var env = require('dotenv').config()
-var ejs = require('ejs');
-var path = require('path');
 var app = express();
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 var session = require('express-session');
 var MongoStore = require('connect-mongo')(session);
-var request = require('request-promise');
-var cron = require("node-cron")
 var td_log = require('./src/models/trade_log')
 var Users = require('./src/models/user.js');
 const limit = require('./src/models/limit.js');
+const fetch123 = require('./src/utls/s_price');
+const limitexe = require('./src/utls/limitexe');
 
-mongoose.set("strictQuery", false);
-mongoose.connect('mongodb+srv://nisargpatel0466:nn__4569@cluster0.lsqbqko.mongodb.net/cyborg0?retryWrites=true&w=majority', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}, (err) => {
-  if (!err) {
-    console.log('MongoDB Connection Succeeded.');
-  } else {
-    console.log('Error in DB connection : ' + err);
-  }
-});
-
-const tdata = async () => {
-  // console.log(e);
-  // console.log(x);
-  // await limit.findOneAndUpdate(
-  //   { stockname: x },
-  //   {
-  //     $push: {
-  //       log: e
-  //     }
-  //   }
-  // );
-
-  // const info = await fetch123(stockname);
-    const minExPrice = 100;
-    const maxExPrice = 120;
-    const data = await limit.findOne({
-        'stockname': "BPCL",
-        'log.ex_price': { $gte: 90, $lte: 110 }
+const {buy_handle, sell_handle} = require('./src/control/limit_order');
+getConnection = async () => {
+  try {
+    mongoose.set("strictQuery", false);
+    await mongoose.connect(
+      'mongodb+srv://nisargpatel0466:nn__4569@cluster0.lsqbqko.mongodb.net/cyborg0?retryWrites=true&w=majority',
+      { useNewUrlParser: true }
+    ).then(async () => {
+      console.log('Connection to DB Successful');
+      // for(var i=0; i<=50; i++){
+      //   await tdata();
+      //   console.log(i);
+      // }
+      // await xyz();
+      await abc();
+      // await sdata();
+      // await rtg();
     });
-
-console.log(data);
-
-    var txt = "ADANIENT,2545,2545.2ADANIPORTS,805.05,805.1APOLLOHOSP,4915.65,4915.6ASIANPAINT,3240.1,3240.6AXISBANK,939.75,940.2BAJAJ_AUTO,4641.85,4641.75BAJAJFINSV,1521.15,1520.6BAJFINANCE,7117.5,7119.65BHARTIARTL,870.8,870.75BPCL,360.8,360.6BRITANNIA,4542.65,4544.5CIPLA,1253.65,1253.6COALINDIA,235.05,235.1DIVISLAB,3742.05,3742.15DRREDDY,5829.3,5829.5EICHERMOT,3428,3428GRASIM,1830,1830HCLTECH,1136,1136HDFCBANK,1636,1635.45HDFCLIFE,639.4,639.15HEROMOTOCO,3028.6,3028.55HINDALCO,467.05,467.05HINDUNILVR,2535.9,2536.55ICICIBANK,967.25,967.1INDUSINDBK,1423.45,1422.95INFY,1392.1,1392.2ITC,452.1,452.1JSWSTEEL,829.6,829.15KOTAKBANK,1811.45,1811.15LT,2642.35,2641.7LTIM,5108.55,5108MARUTI,9381.8,9380.05M_M,1547,1547.05NESTLEIND,21959.95,21956.95NTPC,217.15,217.2ONGC,178.65,178.65POWERGRID,240.9,241RELIANCE,2549.3,2549.05SBILIFE,1337.95,1338.25SBIN,572.7,572.8SUNPHARMA,1146.7,1146.6TATACONSUM,852.5,853.25TATAMOTORS,619,617TATASTEEL,120.1,120.25TCS,3448.25,3450.45TECHM,1235.3,1236TITAN,2971,2970.95ULTRACEMCO,8113.35,8113.7UPL,609.35,607.4WIPRO,417.95,417.99"
-
-    console.log(txt.length);
+  } catch (err) {
+    console.error('Connection to DB Failed:', err);
+  }
 }
 
-tdata();
+getConnection();
+
+function randINT(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+const sdata = async () => {
+  var username = "np" + "1";
+  const udata1 = await Users.findOne({ username: username});
+  var array = udata1.portfolio;
+
+  for(i in array){
+    const order = {
+      username : username,
+      stockname : array[i].stockname,
+      exprice : array[i].buy_price,
+      quantity : array[i].quantity,
+      ordertime : "delivery",
+      direction : "SELL"
+    }
+
+    const x = await sell_handle(order);
+    console.log(x);
+  }
+
+  username = "np" + "2";
+  const udata2 = await Users.findOne({ username: username});
+  array = udata2.portfolio;
+
+  for(i in array){
+    const order = {
+      username : username,
+      stockname : array[i].stockname,
+      exprice : array[i].buy_price,
+      quantity : array[i].quantity,
+      ordertime : "delivery",
+      direction : "SELL"
+    }
+
+    const x = await sell_handle(order);
+    console.log(x);
+  }
+
+  username = "np" + "3";
+  const udata3 = await Users.findOne({ username: username});
+  array = udata3.portfolio;
+
+  for(i in array){
+    const order = {
+      username : username,
+      stockname : array[i].stockname,
+      exprice : array[i].buy_price,
+      quantity : array[i].quantity,
+      ordertime : "delivery",
+      direction : "SELL"
+    }
+
+    const x = await sell_handle(order);
+    console.log(x);
+  }
+}
+
+const tdata = async () => {
+  const usern = randINT(1, 3);
+  const stockn = randINT(0, 49);
+  const quqn = randINT(1,20);
+  const dirn = randINT(1,2);
+  const odtn = randINT(1,2);
+  
+  var array = [ "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK", "BAJAJ_AUTO", "BAJAJFINSV",
+                "BAJFINANCE", "BHARTIARTL", "BPCL", "BRITANNIA", "CIPLA", "COALINDIA", "DIVISLAB", "DRREDDY",
+                "EICHERMOT", "GRASIM", "HCLTECH", "HDFCBANK", "HDFCLIFE", "HEROMOTOCO", "HINDALCO", "HINDUNILVR",
+                "ICICIBANK", "INDUSINDBK", "INFY", "ITC", "JSWSTEEL", "KOTAKBANK", "LT", "LTIM", "MARUTI", "M_M",
+                "NESTLEIND", "NTPC", "ONGC", "POWERGRID", "RELIANCE", "SBILIFE", "SBIN", "SUNPHARMA", "TATACONSUM",
+                "TATAMOTORS", "TATASTEEL", "TCS", "TECHM", "TITAN", "ULTRACEMCO", "UPL", "WIPRO"];
+  
+  const pp = await fetch123(array[stockn]);
+  const stockname = array[stockn];
+  const order = {
+    stockname : stockname,
+    username : "np" + usern,
+    ex_price : pp,
+    quantity : quqn,
+    direction : "BUY",
+    ordertime : (odtn == 1) ? "intraday" : "delivery"
+  }
+  console.log(stockname);
+  // console.log(order);
+  // await limit.updateOne(
+  //   { stockname: stockname },
+  //   { $push: { log: order} }
+  // );
+  const x = await buy_handle(order);
+  console.log(x);
+}
+
+async function abc(){
+  var array = [ "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK", "BAJAJ_AUTO", "BAJAJFINSV",
+                "BAJFINANCE", "BHARTIARTL", "BPCL", "BRITANNIA", "CIPLA", "COALINDIA", "DIVISLAB", "DRREDDY",
+                "EICHERMOT", "GRASIM", "HCLTECH", "HDFCBANK", "HDFCLIFE", "HEROMOTOCO", "HINDALCO", "HINDUNILVR",
+                "ICICIBANK", "INDUSINDBK", "INFY", "ITC", "JSWSTEEL", "KOTAKBANK", "LT", "LTIM", "MARUTI", "M_M",
+                "NESTLEIND", "NTPC", "ONGC", "POWERGRID", "RELIANCE", "SBILIFE", "SBIN", "SUNPHARMA", "TATACONSUM",
+                "TATAMOTORS", "TATASTEEL", "TCS", "TECHM", "TITAN", "ULTRACEMCO", "UPL", "WIPRO"];
+  
+                for( i in array){
+                  await limitexe(array[i]);
+                }
+                // await limitexe("NESTLEIND");
+}
+
+async function xyz(){
+  var array = [ "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK", "BAJAJ_AUTO", "BAJAJFINSV",
+                "BAJFINANCE", "BHARTIARTL", "BPCL", "BRITANNIA", "CIPLA", "COALINDIA", "DIVISLAB", "DRREDDY",
+                "EICHERMOT", "GRASIM", "HCLTECH", "HDFCBANK", "HDFCLIFE", "HEROMOTOCO", "HINDALCO", "HINDUNILVR",
+                "ICICIBANK", "INDUSINDBK", "INFY", "ITC", "JSWSTEEL", "KOTAKBANK", "LT", "LTIM", "MARUTI", "M_M",
+                "NESTLEIND", "NTPC", "ONGC", "POWERGRID", "RELIANCE", "SBILIFE", "SBIN", "SUNPHARMA", "TATACONSUM",
+                "TATAMOTORS", "TATASTEEL", "TCS", "TECHM", "TITAN", "ULTRACEMCO", "UPL", "WIPRO"];
+  
+                for( i in array){
+                  var newentry = new limit({
+                    stockname : array[i],
+                    log : []
+                  });
+        
+                  newentry.save(function(err, Person){
+                    if(err)
+                      console.log(err);
+                    else
+                      console.log('Success entry', i);
+                  });
+                }
+}
+
+async function rtg() {
+  try {
+      const updatedUser = await Users.findOneAndUpdate(
+          { username: "np1" },
+          { $inc: { balance: 10000000 } },
+          { new: true } // This option returns the updated document
+      );
+
+      if (updatedUser) {
+          console.log("User balance updated:", updatedUser);
+      } else {
+          console.log("User not found.");
+      }
+  } catch (error) {
+      console.error("Error updating user balance:", error);
+  }
+}
+
+// Call the async function
+
+
+
+
+
+
 

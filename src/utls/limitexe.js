@@ -5,21 +5,23 @@ const sell_post = require('./sell_post');
 
 module.exports = async function limit_execution(stockname){
 
+    console.log('Limit execution');
     stockname = stockname.toUpperCase();
-    const info = await fetch123(stockname);
+    var info = await fetch123(stockname);
+    info[1] = parseFloat(info[1]);
+    info[2] = parseFloat(info[2]);
+    console.log(info);
     const minExPrice = Math.min(info[1], info[2]);
     const maxExPrice = Math.max(info[1], info[2]);
-    const data = await limit.find({
+
+    var data = await limit.find({
         'stockname': stockname,
-        'log.ex_price': { $gte: minExPrice, $lte: maxExPrice }
+        'log.$.ex_price': { $gte: minExPrice, $lte: maxExPrice }
     });
-
-    if(data.length <= 0){
-        return;
-    }
-
+    // console.log(data);
+    data = data[0].log;
+    // console.log(data.log);
     for(i in data){
-
         const order = {
             username : data[i].username,
             stockname : stockname,
@@ -28,8 +30,8 @@ module.exports = async function limit_execution(stockname){
             ordertime : data[i].ordertime,
             direction : data[i].direction
         }
-
-        if(order.direction === "buy"){
+        // console.log(order);
+        if(order.direction === "BUY"){
             const x = await buy_post(order);
             console.log(x);
         }
@@ -38,4 +40,10 @@ module.exports = async function limit_execution(stockname){
             console.log(x);
         }
     }
+
+    return;
+    // await limit.updateMany(
+    //     { stockname : stockname },
+    //     { $pull: { log: { ex_price: { $gte: minExPrice, $lte: maxExPrice } } } }
+    // );
 }
