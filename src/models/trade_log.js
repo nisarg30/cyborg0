@@ -7,12 +7,13 @@ tradeSchema = new Schema({
     delivery : [{
         _id : false,
         stockname  : String,
+        realised : Number,
         dlog : [{
             _id : false,
             date : String,
             ex_price : Number,
             direction : String,
-            quantity : Number
+            quantity : Number,
         }]
     }],
     intraday : [{

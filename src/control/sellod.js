@@ -1,201 +1,137 @@
-var express = require('express');
-var router = express.Router();
-var Users = require('../models/user');
-var op_logs = require('../models/open_trades');
-var td_logs = require('../models/trade_log');
-const fetch123 = require('../utls/s_price');
+const express = require('express');
+const router = express.Router();
+const Users = require('../models/user');
+const op_logs = require('../models/open_trades');
+const td_logs = require('../models/trade_log');
+const fetchStockPrice = require('../utls/s_price');
 
 module.exports = async (req, res) => {
-    if(!req.session.userId)
-	{
-		console.log(req.session.userId);
-		res.send({Success : "login required."});
-		return;
-	}
+    if (!req.session.userId) {
+        return res.send({ Success: "login required." });
+    }
 
-	
-	var exprice = await fetch123(req.body.stockname);
-	exprice = parseFloat(exprice);
-		if(req.body.ordertime == "delivery")
-		{
-			Users.findOne({username:req.session.userId},async function(err,data){
+    const stockName = req.body.stockname;
+    const orderTime = req.body.ordertime;
+    const quantity = req.body.quantity;
 
-				var flag = 1,  flag2 = 1;
-				var srr = data.portfolio;
-				var index = 0;
-				for(i in srr)
-				{
-					if(srr[i].stockname == req.body.stockname)
-					{
-						// flag = 0;
-						if(req.body.quantity > srr[i].quantity)
-						{
-							flag = 0;
-							return res.send({"success" : "insufficient quantity.", availabel : srr[i].quantity});
-						}          
+    try {
+        // Fetch the current stock price
+        const exPrice = parseFloat(await fetchStockPrice(stockName));
 
-						srr[i].quantity = srr[i].quantity - req.body.quantity;
-						if(srr[i].quantity == 0)
-						{
-							index = i;
-							flag2 = 0;
-						}	
-						flag = 0;
-						break;
-					}
-				}
+        if (orderTime === "delivery") {
+            // Handle delivery sell order
+            const user = await Users.findOne({ username: req.session.userId });
 
-				if(flag2==0)
-					srr.splice(index, 1);
+            const stock = user.portfolio.find(item => item.stockname === stockName);
 
-				if(flag)
-				{
-					return res.send({"success" : "you dont own this stock."});
-				}
-				console.log(data.balance + (req.body.quantity*exprice));
-				await Users.updateOne(
-					{ "username" : req.session.userId},
-					{
-						$set : {
-							balance : data.balance + (req.body.quantity*exprice),
-							portfolio : srr
-						}
-					}
-				);
+            if (!stock) {
+                return res.send({ success: "you don't own this stock" });
+            }
 
-				await op_logs.updateOne(
-					{ "username" : req.session.userId},
-					{
-						$set : {
-							balance : data.balance + (req.body.quantity*exprice),
-						}
-					}
-				);
+            if (quantity > stock.quantity) {
+                return res.send({ success: "insufficient quantity.", available: stock.quantity });
+            }
 
-				td_logs.findOne({username:req.session.userId},async function(err,data){
+            stock.quantity -= quantity;
 
-					var array = data.delivery;
+            if (stock.quantity === 0) {
+                user.portfolio = user.portfolio.filter(item => item.stockname !== stockName);
+            }
 
-					for(i in array)
-					{
-						if(array[i].stockname == req.body.stockname)
-						{
-							var tuy = {
-                                date : new Date().toLocaleDateString(),
-                                exprice: exprice,
-                                direction : "SELL",
-                                quantity : req.body.quantity
-                            }
-                            array[i].dlog.push(tuy);
-							break;
-						}
-					}
+            const newBalance = user.balance + quantity * exPrice;
 
-					await td_logs.updateOne(
-						{ "username" : req.session.userId},
-						{
-							$set : {
-								delivery : array
-							}
-						}
-					);
-				});
-				return res.send("sell delivery exec!");
-			});
+            await Users.updateOne(
+                { username: req.session.userId },
+                { $set: { balance: newBalance, portfolio: user.portfolio } }
+            );
 
-			
-		}
-		else
-		{
-			op_logs.findOne({username:req.session.userId},async function(err,data){
+            await op_logs.updateOne(
+                { username: req.session.userId },
+                { $set: { balance: newBalance } }
+            );
 
-				if(data == null)
-				{
-					return res.send("you don't own this stock");
-				}
-				var str = data.log;
-				var sex = 1,sex2 = 1;
-				var ind = 0;
-				for(i in str)
-				{
-					// console.log(str[i]);
-					if(str[i].stockname == req.body.stockname)
-					{
-						if(req.body.quantity > str[i].quantity)
-						{
-							sex = 0;
-							return res.send({"success" : "insufficient quantity.", availabel : str[i].quantity});
-						}
-						sex = 0;
-						str[i].quantity = (str[i].quantity - req.body.quantity);
+            const tradeLog = await td_logs.findOne({ username: req.session.userId });
+            if (tradeLog) {
+                const stockLog = tradeLog.delivery.find(log => log.stockname === stockName);
 
-						if(str[i].quantity == 0)
-						{
-							ind = i;
-							sex2 = 0;
-						}
-					}
-				}
+                if (stockLog) {
+					stockLog.realised += ( exPrice - stock.buy_price) * quantity;
+                    stockLog.dlog.push({
+                        date: new Date().toLocaleDateString(),
+                        ex_price: exPrice,
+                        direction: "SELL",
+                        quantity: quantity
+                    });
+                }
 
-				if(sex == 1)
-				{
-					return res.send({"success" : "you dont own this stock."});
-				}
+                await td_logs.updateOne(
+                    { username: req.session.userId },
+                    { $set: { delivery: tradeLog.delivery } }
+                );
+            }
 
-				if(sex2==0)
-					str.splice(ind, 1);
-				
-				await Users.updateOne(
-					{ "username" : req.session.userId},
-					{
-						$set : {
-							balance : data.balance + (req.body.quantity*exprice),
-						}
-					}
-				);
-	
-				await op_logs.updateOne(
-					{ "username" : req.session.userId},
-					{
-						$set : {
-							balance : data.balance + (req.body.quantity*exprice),
-							log : str
-						}
-					}
-				);
+            return res.send("sell delivery executed!");
+        } else {
+            // Handle intraday sell order
+            const opLog = await op_logs.findOne({ username: req.session.userId });
 
-				td_logs.findOne({username:req.session.userId},async function(err,data){
+            if (!opLog) {
+                return res.send("you don't own this stock");
+            }
 
-					var array = data.intraday;
-					for(i in array)
-					{
-						if(array[i].date == new Date().toLocaleDateString() ){
-                            
-                            for(j in array[i].logos)
-						    {
-							    if(array[i].logos[j].stockname == req.body.stockname)
-							    {
-                                    array[i].logos[j].quantity = (array[i].logos[j].quantity + req.body.quantity);
-									array[i].logos[j].sell_price = ((array[i].logos[j].sell_price*array[i].logos[j].quantity)+(exprice*req.body.quantity))/(array[i].logos[j].quantity); 
-								    array[i].logos[j].realised  = (array[i].logos[j].sell_price - array[i].logos[j].buy_price) * array[i].logos[j].quantity;
-							    }
-						    }
-                        }
-					}
+            const stock = opLog.log.find(item => item.stockname === stockName);
 
-					await td_logs.updateOne(
-						{ "username" : req.session.userId},
-						{
-							$set : {
-								intraday : array
-							}
-						}
-					);
-				});
-				return res.send("sell intraday exec!");
-			});
-		}
-	
+            if (!stock) {
+                return res.send({ success: "you don't own this stock" });
+            }
+
+            if (quantity > stock.quantity) {
+                return res.send({ success: "insufficient quantity.", available: stock.quantity });
+            }
+
+            stock.quantity -= quantity;
+
+            if (stock.quantity === 0) {
+                opLog.log = opLog.log.filter(item => item.stockname !== stockName);
+            }
+
+            const newBalance = opLog.balance + quantity * exPrice;
+
+            await Users.updateOne(
+                { username: req.session.userId },
+                { $set: { balance: newBalance } }
+            );
+
+            await op_logs.updateOne(
+                { username: req.session.userId },
+                { $set: { balance: newBalance, log: opLog.log } }
+            );
+
+            const tdLog = await td_logs.findOne({ username: req.session.userId });
+            if (tdLog) {
+                const stockLog = tdLog.intraday.find(log => log.date === new Date().toLocaleDateString());
+
+                if (stockLog) {
+                    const stockIntradayLog = stockLog.logos.find(item => item.stockname === stockName);
+
+                    if (stockIntradayLog) {
+                        stockIntradayLog.sell_price = ((stockIntradayLog.sell_price * stockIntradayLog.quantity) + (exPrice * quantity)) / (stockIntradayLog.quantity + quantity);
+                        stockIntradayLog.quantity += quantity;
+                        stockIntradayLog.realised = (stockIntradayLog.sell_price - stockIntradayLog.buy_price) * stockIntradayLog.quantity;
+                    }
+                }
+
+                await td_logs.updateOne(
+                    { username: req.session.userId },
+                    { $set: { intraday: tdLog.intraday } }
+                );
+            }
+
+            return res.send("sell intraday executed!");
+        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).send({ error: "An error occurred." });
+    }
 };
-
 

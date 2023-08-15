@@ -1,8 +1,8 @@
 const fs = require('fs').promises;
 const path = require('path');
 
-async function read(stockname)
-{
+async function read(stockname) {
+
     var obj = {
         ADANIENT: '0',
         ADANIPORTS: '1',
@@ -55,16 +55,32 @@ async function read(stockname)
         UPL: '48',
         WIPRO: '49'
     }
-    var query = stockname.toUpperCase();
-    const data = await fs.readFile(path.resolve('src/utls/data.csv'), 'utf8');
-    const rows = data.split('\n');
-    rows[obj[query]] = rows[obj[query]].split(',');
-    return rows[obj[query]][1];
+    try {
+        const query = stockname.toUpperCase();
+        const data = await fs.readFile(path.resolve('src/utls/data.csv'), 'utf8');
+        const rows = data.split('\n');
+        rows[obj[query]] = rows[obj[query]].split(',');
+        return rows[obj[query]][1];
+    } catch (error) {
+        throw error;
+    }
 }
 
 module.exports = async function call(stockname) {
-    const data = await read(stockname);
-    return data;
-}
+    try {
+        const data = await read(stockname);
+        return data;
+    } catch (error) {
+        console.error('Error:', error);
+        console.log('Rerunning...');
+        return call(stockname); // Recursively rerun the function
+    }
+};
+
+
+
+
+
+
 
 

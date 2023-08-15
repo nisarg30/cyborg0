@@ -75,9 +75,9 @@ async function fetch(stn){
     
     chart.onUpdate(async () => {
         // console.log(chart.infos.name);
-        limitexe(chart.infos.name).then(async () => {
-          console.log("limitexe successfully updated");
-        });
+        // limitexe(chart.infos.name).then(async () => {
+        //   console.log("limitexe successfully updated");
+        // });
         const x = await write(parseInt(obj[chart.infos.name]) ,chart.periods[0].close);
     });
 }
@@ -94,12 +94,7 @@ async function write(targetRow, newValue) {
       return;
     }
 
-    if(rows[49].endsWith('.')){
-      rows[49] = rows[49].substring(0,18);
-    }
-    else{
-      rows[49] = rows[49].substring(0,19);
-    }
+    rows[49] = rows[49].substring(0,19);
     const columns = rows[targetRow].split(','); // Split by commas
 
     if (columns.length < 3) {

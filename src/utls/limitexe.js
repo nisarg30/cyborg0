@@ -41,9 +41,9 @@ module.exports = async function limit_execution(stockname){
         }
     }
 
+    await limit.updateMany(
+        { stockname : stockname },
+        { $pull: { log: { ex_price: { $gte: minExPrice, $lte: maxExPrice } } } }
+    );
     return;
-    // await limit.updateMany(
-    //     { stockname : stockname },
-    //     { $pull: { log: { ex_price: { $gte: minExPrice, $lte: maxExPrice } } } }
-    // );
 }

@@ -68,7 +68,7 @@ async function buy_handle(order){
         }
     );
 
-    return ({"success":"order placed but pending"});
+    return ({"success":"buy order placed but pending"});
 }
 
 async function sell_handle(order) {
@@ -100,7 +100,7 @@ async function sell_handle(order) {
     }
     else{
 
-        const odata = await Users.findOne({
+        const odata = await op_logs.findOne({
             "username" : order.username, 
         });
 
@@ -126,7 +126,7 @@ async function sell_handle(order) {
                 });
         }
 
-        const logElement = odata.log.find(item => item.stockname === stockName);
+        const logElement = odata.log.find(item => item.stockname === order.stockname);
         if(!logElement){
             return send({"success" : "You don't own this stock"});
         }

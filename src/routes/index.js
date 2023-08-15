@@ -121,7 +121,7 @@ router.post('/limit', async function(req, res, next) {
 	}
 	
 	const order = {
-		username : req.body.username,
+		username : req.session.userId,
 		exprice : req.body.exprice,
 		quantity : req.body.quantity,
 		ordertime : req.body.ordertime,

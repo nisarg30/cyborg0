@@ -6,6 +6,7 @@ var session = require('express-session');
 var MongoStore = require('connect-mongo')(session);
 var td_log = require('./src/models/trade_log')
 var Users = require('./src/models/user.js');
+const op_log = require('./src/models/open_trades');
 const limit = require('./src/models/limit.js');
 const fetch123 = require('./src/utls/s_price');
 const limitexe = require('./src/utls/limitexe');
@@ -19,7 +20,7 @@ getConnection = async () => {
       { useNewUrlParser: true }
     ).then(async () => {
       console.log('Connection to DB Successful');
-      // for(var i=0; i<=50; i++){
+      // for(var i=0; i<=5; i++){
       //   await tdata();
       //   console.log(i);
       // }
@@ -40,33 +41,32 @@ function randINT(min, max) {
 }
 
 const sdata = async () => {
-  var username = "np" + "1";
-  const udata1 = await Users.findOne({ username: username});
-  var array = udata1.portfolio;
+  // var username = "np" + "1";
+  // const udata1 = await Users.findOne({ username: username});
+  // var array = udata1.portfolio;
 
-  for(i in array){
-    const order = {
-      username : username,
-      stockname : array[i].stockname,
-      exprice : array[i].buy_price,
-      quantity : array[i].quantity,
-      ordertime : "delivery",
-      direction : "SELL"
-    }
+  // for(i in array){
+  //   const order = {
+  //     username : username,
+  //     stockname : array[i].stockname,
+  //     exprice : array[i].ex_price,
+  //     quantity : array[i].quantity,
+  //     ordertime : "",
+  //     direction : "SELL"
+  //   }
+  //   const x = await sell_handle(order);
+  //   console.log(x);
+  // }
 
-    const x = await sell_handle(order);
-    console.log(x);
-  }
-
-  username = "np" + "2";
+  var username = "np" + "2";
   const udata2 = await Users.findOne({ username: username});
-  array = udata2.portfolio;
+  var array = udata2.portfolio;
 
   for(i in array){
     const order = {
       username : username,
       stockname : array[i].stockname,
-      exprice : array[i].buy_price,
+      exprice : array[i].ex_price,
       quantity : array[i].quantity,
       ordertime : "delivery",
       direction : "SELL"
@@ -76,27 +76,27 @@ const sdata = async () => {
     console.log(x);
   }
 
-  username = "np" + "3";
-  const udata3 = await Users.findOne({ username: username});
-  array = udata3.portfolio;
+  // username = "np" + "3";
+  // const udata3 = await Users.findOne({ username: username});
+  // array = udata3.portfolio;
 
-  for(i in array){
-    const order = {
-      username : username,
-      stockname : array[i].stockname,
-      exprice : array[i].buy_price,
-      quantity : array[i].quantity,
-      ordertime : "delivery",
-      direction : "SELL"
-    }
+  // for(i in array){
+  //   const order = {
+  //     username : username,
+  //     stockname : array[i].stockname,
+  //     exprice : array[i].ex_price,
+  //     quantity : array[i].quantity,
+  //     ordertime : "intraday",
+  //     direction : "SELL"
+  //   }
 
-    const x = await sell_handle(order);
-    console.log(x);
-  }
+  //   const x = await sell_handle(order);
+  //   console.log(x);
+  // }
 }
 
 const tdata = async () => {
-  const usern = randINT(1, 3);
+  const usern = 2;
   const stockn = randINT(0, 49);
   const quqn = randINT(1,20);
   const dirn = randINT(1,2);
@@ -117,7 +117,7 @@ const tdata = async () => {
     ex_price : pp,
     quantity : quqn,
     direction : "BUY",
-    ordertime : (odtn == 1) ? "intraday" : "delivery"
+    ordertime : "delivery"
   }
   console.log(stockname);
   // console.log(order);
@@ -152,6 +152,7 @@ async function xyz(){
                 "TATAMOTORS", "TATASTEEL", "TCS", "TECHM", "TITAN", "ULTRACEMCO", "UPL", "WIPRO"];
   
                 for( i in array){
+                  // console.log(i);
                   var newentry = new limit({
                     stockname : array[i],
                     log : []
@@ -161,7 +162,7 @@ async function xyz(){
                     if(err)
                       console.log(err);
                     else
-                      console.log('Success entry', i);
+                      console.log('Success entry');
                   });
                 }
 }

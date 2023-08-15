@@ -1,347 +1,229 @@
-//buyorder routes
-var express = require('express');
-var router = express.Router();
-var Users = require('../models/user');
-var op_logs = require('../models/open_trades');
-var td_logs = require('../models/trade_log');
-var request = require('request-promise');
-const { parse } = require('path');
-const { renderFile } = require('ejs');
-const fetch123 = require('../utls/s_price');
+const express = require('express');
+const router = express.Router();
 
-module.exports = async function (req, res){
+const Users = require('../models/user');
+const op_logs = require('../models/open_trades');
+const td_logs = require('../models/trade_log');
+const fetchStockPrice = require('../utls/s_price');
 
-    //fetch stock price
+module.exports = async function (req, res) {
     console.log(req.session.userId);
-	if(!req.session.userId)
-	{
-		console.log(req.session.userId);
-		return res.send({Success : "login required."});
-	}
 
-	// var url = 'http://localhost:4001/';
-	// // console.log(req.body);
-	// if(req.body.ordertype  ==  "limit")
-	// 	url += 'limitorder';
-	// else
-	// 	url += 'marketorder';
+    if (!req.session.userId) {
+        return res.send({ Success: "login required." });
+    }
 
-	// var info ={
-	// 	method : 'POST',
-	// 	uri    :  url,
-	// 	body   :  {'stockname': req.body.stockname},
-	// 	json   :  true
-	// };
+    const stockName = req.body.stockname;
+    const orderTime = req.body.ordertime;
+    const quantity = req.body.quantity;
 
-        //async execution then
-	var exprice = await fetch123(req.body.stockname);
-	exprice = parseFloat(exprice);
-		// console.log(parsedBody);
-        //if-else to diffrentiate deliver and intraday trades
-		if(req.body.ordertime == "delivery")
-		{
-            //find user in users database
-			Users.findOne({username:req.session.userId},async function(err,data){
+    // Fetch the current stock price
+    const exPrice = parseFloat(await fetchStockPrice(stockName));
 
-                //account balance check
-				if(data.balance < exprice*req.body.quantity)
-				{
-					return res.send({	"success" : "insufficient funds.", 
-										"availabel" : Math.floor(data.balance/exprice)});
-				}
+    try {
+        // Find the user's data
+        const user = await Users.findOne({ username: req.session.userId });
 
-                //portfolio fetch manage update
-				var xarr = data.portfolio;
-				var flag = 1;
-				for (i in xarr)
-				{
-					if(xarr[i].stockname == req.body.stockname)
-					{
-						flag = 0;
-						xarr[i].buyprice = (xarr[i].buyprice*xarr[i].quantity)+(exprice*req.body.quantity)/(req.body.quantity+xarr[i].quantity);
-						xarr[i].quantity = xarr[i].quantity + req.body.quantity;
-					}
-				}
+        if (orderTime === "delivery") {
+            // Handle delivery order
+            if (user.balance < exPrice * quantity) {
+                return res.send({
+                    success: "insufficient funds.",
+                    available: Math.floor(user.balance / exPrice)
+                });
+            }
 
-                //update balance in oplogs
-				await op_logs.updateOne(
-					{"username" : req.session.userId},
-					{
-						$set : {
-							balance : data.balance - (req.body.quantity*exprice)
-						}
-					}
-				)
+            const portfolio = user.portfolio;
+            const existingStock = portfolio.find(stock => stock.stockname === stockName);
 
-				if(flag)
-				{
-					await Users.updateOne(
-						{ "username" : req.session.userId},
-						{
-							$push : {
-								portfolio : {
-									stockname : req.body.stockname,
-									buy_price : exprice,
-									quantity : req.body.quantity
-								}
-							},
-							$set : {
-								balance : data.balance - (req.body.quantity*exprice)
-							}
-						}
-					);
-				}
-				else
-				{
-					await Users.updateOne(
-						{"username" : req.session.userId},
-						{
-							$set : {
-								balance : data.balance - (req.body.quantity*exprice),
-								portfolio : xarr
-							}
-						}
-					)
-				}
+            // Update user's balance and portfolio
+            await op_logs.updateOne(
+                { username: req.session.userId },
+                { $set: { balance: user.balance - (quantity * exPrice) } }
+            );
 
-                //update in td logs
-				td_logs.findOne({username:req.session.userId},async function(err,data){
+            if (!existingStock) {
+                // Add new stock to user's portfolio
+                portfolio.push({
+                    stockname: stockName,
+                    buy_price: exPrice,
+                    quantity: quantity
+                });
 
-					var flag = 0;
-					if(data)
-					{
-						console.log("ddd");
-						var xary = data.delivery;
-						for(i in xary)
-						{
-							if(xary[i].stockname == req.body.stockname)
-							{
-								flag = 1;
-								var tuy = {
-									date : new Date().toLocaleDateString(),
-									ex_price: exprice,
-									direction : "BUY",
-									quantity : req.body.quantity
-								}
-								xary[i].dlog.push(tuy);
-							}
-						}
-	
-						if(!flag)
-						{
-							console.log("yyy");
-							var stt = {
-								stockname : req.body.stockname,
-								dlog : [{
-									date : new Date().toLocaleDateString(),
-									ex_price : exprice,
-									direction : "BUY",
-									quantity : req.body.quantity
-								}]
-							}
-							xary.push(stt);
-						}
-	
-						await td_logs.updateOne(
-							{username : req.session.userId}, 
-							{
-								$set : {
-									delivery : xary
-								}
-							}
-						);
-					}
-					else{
-						console.log("else");
-					}
-				});
-				return res.send({"success" : "delivery trade executed."});
-			});
-		}
+                await Users.updateOne(
+                    { username: req.session.userId },
+                    { $set: { 	balance: user.balance - (quantity * exPrice),
+								portfolio: portfolio } }
+                );
 
-        //intraday update
-		else
-		{
-            // go to oplogs no change in users
-			op_logs.findOne({username:req.session.userId},async function(err,data){
-				//check if entry availabel or not
-				if(data)
-				{
-                    //balance check
-					if(data.balance < exprice*req.body.quantity){
-						return res.send({	"success" : "insufficient funds.", 
-											"availabel" : Math.floor(data.balance/exprice)});
-					}
-					
-                    //update
-					var xar = data.log;
-					var fla = 1;
-					for (i in xar)
-					{
-						if(xar[i].stockname == req.body.stockname)
-						{
-							fla = 0;
-							xar[i].buyprice = (xar[i].ex_price*xar[i].quantity)+(exprice*req.body.quantity)/(req.body.quantity+xar[i].quantity);
-							xar[i].quantity = xar[i].quantity + req.body.quantity;
-						}
-					}
+            } else {
+                // Update existing stock's details in the portfolio
+                existingStock.buy_price = (existingStock.buy_price * existingStock.quantity + exPrice * quantity) / (existingStock.quantity + quantity);
+				existingStock.quantity += quantity;
 
-                    //balance update in users
-					await Users.updateOne(
-						{"username" : req.session.userId},
-						{
-							$set :{
-								balance : data.balance - (req.body.quantity*exprice)
-							}
-						}
-					);
-	
-					if(fla)
-					{
-						await op_logs.updateOne(
-							{"username" : req.session.userId },
-							{
-								$push : {
-									log : { 
-										stockname : req.body.stockname,
-										quantity : req.body.quantity,
-										ex_price : exprice,
-										direction : req.body.direction,
-									}
-								},
-								$set :{
-									balance : data.balance - (req.body.quantity*exprice)
-								}
-							}
-						);
-					}
-					else
-					{
-						await op_logs.updateOne(
-							{"username" : req.session.userId},
-							{
-								$set :{
-									balance : data.balance - (req.body.quantity*exprice),
-									log : xar
-								}
-							} 
-						);
-					}
-				}
-                
-                //new entry if data not added in oplogs
-				else
-				{
-					console.log(req.session.userId);
-					var rex;
-					Users.findOne({username:req.session.userId},async function(err,data)
-					{
-						rex = data.balance - (exprice*req.body.quantity);
-						if(rex < 0)
-						{
-							res.send({	"success" : "insufficient funds.", 
-										"availabel" : Math.floor(data.balance/exprice)});
-							return;
-						}
-						console.log(rex);
+                await Users.updateOne(
+                    { username: req.session.userId },
+                    { $set: { balance: user.balance - (quantity * exPrice), portfolio: portfolio } }
+                );
+            }
 
-						var newentry = new op_logs({
-							username : req.session.userId,
-							balance : rex,
-							log : [{
-								stockname : req.body.stockname,
-								quantity : req.body.quantity,
-								ex_price : exprice,
-								direction : req.body.direction
-							}]
-						});
-	
-						newentry.save(function(err, Person){
-							if(err)
-								console.log(err);
-							else
-								console.log('Success entry');
-						});
+            // Update delivery trade logs
+            const tradeLog = await td_logs.findOne({ username: req.session.userId });
 
-						await Users.updateOne(
-							{"username" : req.session.userId},
-							{
-								$set :{
-									balance : data.balance - (req.body.quantity*exprice)
-								}
-							} 
-						);
-					});
-				}
+            if (tradeLog) {
+                const stockLog = tradeLog.delivery.find(log => log.stockname === stockName);
 
-				td_logs.findOne({username:req.session.userId},async function(err,data){
+                if (!stockLog) {
+                    // Add new stock entry in trade logs
+                    tradeLog.delivery.push({
+                        stockname: stockName,
+						realised: 0,
+                        dlog: [{
+                            date: new Date().toLocaleDateString(),
+                            ex_price: exPrice,
+                            direction: "BUY",
+                            quantity: quantity
+                        }]
+                    });
+                } else {
+                    // Update existing stock entry in trade logs
+                    stockLog.dlog.push({
+                        date: new Date().toLocaleDateString(),
+                        ex_price: exPrice,
+                        direction: "BUY",
+                        quantity: quantity
+                    });
+                }
 
-					if(data)
-					{
-						var xara = data.intraday;
-						var flag = 0;
-						var flag2 = 0;
-						var index = 0;
-						for( i in xara)
-						{
-							if(xara[i].date == new Date().toLocaleDateString())
-							{
-								index = i;
-								flag = 1;
-								for(j in xara[i].logos)
-								{
-									if(xara[i].logos[j].stockname == req.body.stockname)
-									{
-										flag2 = 1;
-										console.log("yess");
-										xara[i].logos[j].buy_price = ((xara[i].logos[j].buy_price*xara[i].logos[j].quantity)+(exprice*req.body.quantity))/(req.body.quantity+xara[i].logos[j].quantity);
-									}
-								}
-							}
-						}
+                await td_logs.updateOne(
+                    { username: req.session.userId },
+                    { $set: { delivery: tradeLog.delivery } }
+                );
+            }
 
-						if(!flag2 && flag)
-						{
-							console.log("sss");
-							var sta = {
-								stockname : req.body.stockname,
-								quantity : 0,
-								buy_price : exprice,
-								sell_price : 0,
-								realised : 0
-							};
-							xara[index].logos.push(sta);
-						}
+            return res.send({ success: "delivery trade executed." });
+        } 
+		else {
+            // Handle intraday order
+            const opLog = await op_logs.findOne({ username: req.session.userId });
+            var bprice = 0;
+            if (opLog) {
+                if (opLog.balance < exPrice * quantity) {
+                    return res.send({
+                        success: "insufficient funds.",
+                        available: Math.floor(opLog.balance / exPrice)
+                    });
+                }
 
-						if(!flag)
-						{
-							console.log("xxx");
-							var d = new Date().toLocaleDateString();
-							// var d = "26/05/2023";
-							var y = [{
-								stockname : req.body.stockname,
-								quantity  : 0,
-								buy_price  : exprice,
-								sell_price : 0,
-								realised  : 0,
-							}];
-		
-							var stri = 	{date : d , logos : y};
-							xara.push(stri);
-						}
-						
-						await td_logs.updateOne(
-							{username : req.session.userId}, 
-							{
-								$set : {
-									intraday : xara
-								}
-							});
-					}
-				});
-				return res.send({"success" : "intraday trade executed."});
-			});
-		}
-	return;
+                const stockLog = opLog.log.find(log => log.stockname === stockName);
+
+                // Update user's balance
+                await Users.updateOne(
+                    { username: req.session.userId },
+                    { $set: { balance: opLog.balance - (quantity * exPrice) } }
+                );
+
+                if (!stockLog) {
+                    // Add new stock entry in operation logs
+                    opLog.log.push({
+                        stockname: stockName,
+                        quantity: quantity,
+                        ex_price: exPrice,
+                        direction: req.body.direction,
+                    });
+
+                    await op_logs.updateOne(
+                        { username: req.session.userId },
+                        { $set: { 	balance: opLog.balance - (quantity * exPrice), 
+									log : opLog.log} }
+                    );
+                } else {
+                    // Update existing stock entry in operation logs
+                    stockLog.ex_price = (stockLog.ex_price * stockLog.quantity + exPrice * quantity) / (stockLog.quantity + quantity);
+					stockLog.quantity += quantity;
+                    bprice = stockLog.ex_price;
+                    await op_logs.updateOne(
+                        { username: req.session.userId },
+                        { $set: { balance: opLog.balance - (quantity * exPrice), log: opLog.log } }
+                    );
+                }
+            } else {
+                // Handle case where operation log doesn't exist
+                const userData = await Users.findOne({ username: req.session.userId });
+                const remainingBalance = userData.balance - (exPrice * quantity);
+
+                if (remainingBalance < 0) {
+                    return res.send({
+                        success: "insufficient funds.",
+                        available: Math.floor(userData.balance / exPrice)
+                    });
+                }
+
+                // Create a new operation log entry
+                const newEntry = new op_logs({
+                    username: req.session.userId,
+                    balance: remainingBalance,
+                    log: [{
+                        stockname: stockName,
+                        quantity: quantity,
+                        ex_price: exPrice,
+                        direction: req.body.direction
+                    }]
+                });
+
+                await newEntry.save();
+
+                await Users.updateOne(
+                    { username: req.session.userId },
+                    { $set: { balance: remainingBalance } }
+                );
+            }
+
+            // Update intraday trade logs
+            const tdLog = await td_logs.findOne({ username: req.session.userId });
+
+            if (tdLog) {
+                const stockLog = tdLog.intraday.find(log => log.date === new Date().toLocaleDateString());
+
+                if (!stockLog) {
+                    const currentDate = new Date().toLocaleDateString();
+                    tdLog.intraday.push({
+                        date: currentDate,
+                        logos: [{
+                            stockname: stockName,
+                            quantity: 0,
+                            buy_price: exPrice,
+                            sell_price: 0,
+                            realised: 0
+                        }]
+                    });
+                } else {
+                    const stockIntradayLog = stockLog.logos.find(log => log.stockname === stockName);
+
+                    if (!stockIntradayLog) {
+                        stockLog.logos.push({
+                            stockname: stockName,
+                            quantity: 0,
+                            buy_price: exPrice,
+                            sell_price: 0,
+                            realised: 0
+                        });
+                    }
+                    else{
+                        stockIntradayLog.buy_price = bprice;
+                    }
+                }
+
+                await td_logs.updateOne(
+                    { username: req.session.userId },
+                    { $set: { intraday: tdLog.intraday } }
+                );
+            }
+
+            return res.send({ success: "intraday trade executed." });
+        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).send({ error: "An error occurred." });
+    }
 };
-
