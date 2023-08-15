@@ -6,6 +6,7 @@ limitSchema = new Schema({
 	stockname   : String,
     log : [{
         _id : false,
+        time : String,
         username   : String,
         quantity   : Number,
         ex_price   : Number,

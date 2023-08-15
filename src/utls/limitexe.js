@@ -5,7 +5,7 @@ const sell_post = require('./sell_post');
 
 module.exports = async function limit_execution(stockname){
 
-    console.log('Limit execution');
+    
     stockname = stockname.toUpperCase();
     var info = await fetch123(stockname);
     info[1] = parseFloat(info[1]);
@@ -14,8 +14,12 @@ module.exports = async function limit_execution(stockname){
     const minExPrice = Math.min(info[1], info[2]);
     const maxExPrice = Math.max(info[1], info[2]);
 
+    const logTime = moment.tz(this.ordertime, 'Asia/Kolkata');
+    const timeString = logTime.format('HH:mm:ss');
+
     var data = await limit.find({
         'stockname': stockname,
+        'log.$.time' : { $lte : timeString },
         'log.$.ex_price': { $gte: minExPrice, $lte: maxExPrice }
     });
     // console.log(data);
@@ -43,7 +47,7 @@ module.exports = async function limit_execution(stockname){
 
     await limit.updateMany(
         { stockname : stockname },
-        { $pull: { log: { ex_price: { $gte: minExPrice, $lte: maxExPrice } } } }
+        { $pull: { log: { ex_price: { $gte: minExPrice, $lte: maxExPrice }, time: { $lte : timeString } } } }
     );
     return;
 }

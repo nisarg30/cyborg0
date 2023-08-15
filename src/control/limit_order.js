@@ -5,6 +5,7 @@ const op_logs = require('../models/open_trades');
 const td_logs = require('../models/trade_log');
 const limit = require('../models/limit.js');
 const fetch123 = require('../utls/s_price');
+const moment = require('moment-timezone');
 
 async function buy_handle(order){
 
@@ -18,7 +19,10 @@ async function buy_handle(order){
 				}
     }
 
+    const logTime = moment.tz(this.ordertime, 'Asia/Kolkata');
+    const timeString = logTime.format('HH:mm:ss');
     var entry = {
+        time : timeString,
         username: order.username,
         quantity: order.quantity,
         ex_price: order.ex_price,
@@ -144,8 +148,10 @@ async function sell_handle(order) {
             }
         );
     }
-
+    const logTime = moment.tz(this.ordertime, 'Asia/Kolkata');
+    const timeString = logTime.format('HH:mm:ss');
     var entry = {
+        time : timeString,
         username: order.username,
         quantity: order.quantity,
         ex_price: order.exprice,

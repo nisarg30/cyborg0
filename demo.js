@@ -20,12 +20,12 @@ getConnection = async () => {
       { useNewUrlParser: true }
     ).then(async () => {
       console.log('Connection to DB Successful');
-      // for(var i=0; i<=5; i++){
-      //   await tdata();
-      //   console.log(i);
-      // }
+      for(var i=0; i<=5; i++){
+        await tdata();
+        console.log(i);
+      }
       // await xyz();
-      await abc();
+      // await abc();
       // await sdata();
       // await rtg();
     });
@@ -96,7 +96,7 @@ const sdata = async () => {
 }
 
 const tdata = async () => {
-  const usern = 2;
+  const usern = 1;
   const stockn = randINT(0, 49);
   const quqn = randINT(1,20);
   const dirn = randINT(1,2);
