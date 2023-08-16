@@ -19,6 +19,158 @@ async function buy_handle(order){
 				}
     }
 
+    await Users.updateOne(
+        { "username" : order.username },
+        {
+            $set : {
+                balance : udata.balance - (order.quantity*exprice),
+            }
+        }
+    );
+
+    if(order.ordertime === 'delivery'){
+        const pipeline = [
+            { $match: { username : order.username } },
+            { $unwind: '$portfolio' },
+            { $match: { 'portfolio.stockname':  order.stockname} },
+            { $replaceRoot: { newRoot: '$portfolio' } }
+        ];
+        
+        const portfolioElement = await Users.aggregate(pipeline);
+        if(portfolioElement.length <= 0) {
+            const newPortfolioElement = {
+                stockname : order.stockname,
+                quantity : 0,
+                buy_price : 0
+            }
+            const filter = { username : order.username };
+            const update = { $push: { portfolio: newPortfolioElement } };
+            const result = await Users.updateOne(filter, update);
+        }
+    
+        const tradeDeliveryele = await td_logs.aggregate([
+            {
+                $match: {
+                    "username": order.username,
+                    "delivery": {
+                        $elemMatch: {
+                            "stockname": order.stockname,
+                        }
+                    }
+                }
+                },
+                { $unwind: "$delivery" },
+                { $match: {
+                    "delivery.stockname": order.stockname
+                }},
+                { $replaceRoot: {
+                    newRoot: "$delivery"
+                }}
+            ]);
+            
+            if(tradeDeliveryele.length <= 0) {
+                const newDeliveryItem = {
+                    stockname: order.stockname,
+                    realised: 0,
+                    dlog: []
+                };
+                
+                td_logs.updateOne(
+                    { username: order.username },
+                    { $push: { delivery: newDeliveryItem } }
+                )
+            }
+    }
+    else if(order.ordertime === 'intraday'){
+        //new op_logs entry
+        const odata = await op_logs.findOne({username : order.username});
+        if(!odata) {
+            const newLogEntry = new op_logs({
+                username: order.username,
+                balance: udata.balance,
+                log: []
+            });
+            const savedLogEntry = await newLogEntry.save();
+        }
+
+        //op_logs presetting
+        const logpipeline = [
+            { $match: { username : order.username } },
+            { $unwind: '$log' },
+            { $match: { 'log.stockname':  order.stockname} },
+            { $replaceRoot: { newRoot: '$log' } }
+        ];
+        
+        const logElement = await Users.aggregate(logpipeline);
+        if(logElement.length <= 0) {
+            const newlogElement = {
+                stockname : order.stockname,
+                quantity : 0,
+                buy_price : 0
+            }
+            const filter = { username : order.username };
+            const update = { $push: { log: newlogElement } };
+            const result = await Users.updateOne(filter, update);
+        }
+
+        // intraday presetting
+        const intradayQuery = {
+            "username": order.username,
+            'intraday.date': new Date().toLocaleDateString()
+        };
+        const intradayData = await td_logs.findOne(intradayQuery).select('intraday.$');
+    
+        if (!intradayData) {
+            // Create new intraday log entry
+            const newIntradayObject = {
+                date: new Date().toLocaleDateString(),
+                logos: [{
+                    stockname: order.stockname,
+                    quantity: 0,
+                    buy_price: 0,
+                    sell_price: 0,
+                    realised: 0
+                }]
+            }
+            await td_logs.updateOne(
+                { username: order.username },
+                { $push: { intraday: newIntradayObject } }
+            );
+        } else {
+            const intradayArray = intradayData.intraday[0].logos;
+            // Check if the stock is already in the intraday log
+            const existingIntradayTradeIndex = intradayArray.findIndex(item => item.stockname === order.stockname);
+            if (existingIntradayTradeIndex === -1) {
+                // Update existing intraday trade
+                intradayArray.push({
+                    stockname: order.stockname,
+                    quantity: 0,
+                    buy_price: 0,
+                    sell_price: 0,
+                    realised: 0
+                });
+            }
+            // Update and save the intraday log
+            const intradayUpdate = { 'intraday.$.logos': intradayArray };
+            await td_logs.findOneAndUpdate(
+                intradayQuery,
+                { $set: intradayUpdate }
+            );
+        }    
+    }
+    else {
+        
+    }
+
+    await op_logs.updateOne(
+        { "username" : order.username },
+        {
+            $set : {
+                balance : udata.balance - (order.quantity*exprice),
+            }
+        }
+    );
+    
     const logTime = moment.tz(this.ordertime, 'Asia/Kolkata');
     const timeString = logTime.format('HH:mm:ss');
     var entry = {
@@ -38,36 +190,6 @@ async function buy_handle(order){
                 console.error('Error updating log:', err);
             } else {
                 // Log successful update if needed
-            }
-        }
-    );
-
-    await Users.updateOne(
-        { "username" : order.username },
-        {
-            $set : {
-                balance : udata.balance - (order.quantity*exprice),
-            }
-        }
-    );
-    
-    if(order.ordertime == 'intraday'){
-        const odata = await op_logs.findOne({username : order.username});
-        if(!odata) {
-            const newLogEntry = new op_logs({
-                username: order.username,
-                balance: udata.balance,
-                log: []
-            });
-            const savedLogEntry = await newLogEntry.save();
-        }
-    }
-
-    await op_logs.updateOne(
-        { "username" : order.username },
-        {
-            $set : {
-                balance : udata.balance - (order.quantity*exprice),
             }
         }
     );
@@ -103,13 +225,11 @@ async function sell_handle(order) {
         );
     }
     else{
-
+        
         const odata = await op_logs.findOne({
             "username" : order.username, 
         });
-
         const udata = await Users.findOne({username: order.username });
-
         if(!odata){
                 var newentry = new op_logs({
                     username : order.username,
@@ -136,7 +256,7 @@ async function sell_handle(order) {
         }
         
         if(logElement.quantity < order.quantity){
-            return send({"success" : "insufficient quantity", "available" : logElement.quantity});
+            return ({"success" : "insufficient quantity", "available" : logElement.quantity});
         }
 
         await op_logs.updateOne(
@@ -148,6 +268,7 @@ async function sell_handle(order) {
             }
         );
     }
+
     const logTime = moment.tz(this.ordertime, 'Asia/Kolkata');
     const timeString = logTime.format('HH:mm:ss');
     var entry = {

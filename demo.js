@@ -20,14 +20,15 @@ getConnection = async () => {
       { useNewUrlParser: true }
     ).then(async () => {
       console.log('Connection to DB Successful');
-      for(var i=0; i<=5; i++){
-        await tdata();
-        console.log(i);
-      }
       // await xyz();
+      // for(var i=0; i<15; i++){
+      //   await tdata();
+      //   console.log(i);
+      // }
       // await abc();
       // await sdata();
-      // await rtg();
+      // await abc();
+      await rtg();
     });
   } catch (err) {
     console.error('Connection to DB Failed:', err);
@@ -41,26 +42,9 @@ function randINT(min, max) {
 }
 
 const sdata = async () => {
-  // var username = "np" + "1";
-  // const udata1 = await Users.findOne({ username: username});
-  // var array = udata1.portfolio;
-
-  // for(i in array){
-  //   const order = {
-  //     username : username,
-  //     stockname : array[i].stockname,
-  //     exprice : array[i].ex_price,
-  //     quantity : array[i].quantity,
-  //     ordertime : "",
-  //     direction : "SELL"
-  //   }
-  //   const x = await sell_handle(order);
-  //   console.log(x);
-  // }
-
-  var username = "np" + "2";
-  const udata2 = await Users.findOne({ username: username});
-  var array = udata2.portfolio;
+  var username = "np" + "1";
+  const udata1 = await op_log.findOne({ username: username});
+  var array = udata1.log;
 
   for(i in array){
     const order = {
@@ -68,37 +52,55 @@ const sdata = async () => {
       stockname : array[i].stockname,
       exprice : array[i].ex_price,
       quantity : array[i].quantity,
-      ordertime : "delivery",
+      ordertime : "intraday",
       direction : "SELL"
     }
-
+    console.log(order);
     const x = await sell_handle(order);
     console.log(x);
   }
 
-  // username = "np" + "3";
-  // const udata3 = await Users.findOne({ username: username});
-  // array = udata3.portfolio;
+  username = "np" + "2";
+  const udata2 = await op_log.findOne({ username: username});
+  array = udata2.log;
 
-  // for(i in array){
-  //   const order = {
-  //     username : username,
-  //     stockname : array[i].stockname,
-  //     exprice : array[i].ex_price,
-  //     quantity : array[i].quantity,
-  //     ordertime : "intraday",
-  //     direction : "SELL"
-  //   }
+  for(i in array){
+    const order = {
+      username : username,
+      stockname : array[i].stockname,
+      exprice : array[i].ex_price,
+      quantity : array[i].quantity,
+      ordertime : "intraday",
+      direction : "SELL"
+    }
+    console.log(order);
+    const x = await sell_handle(order);
+    console.log(x);
+  }
 
-  //   const x = await sell_handle(order);
-  //   console.log(x);
-  // }
+  username = "np" + "3";
+  const udata3 = await op_log.findOne({ username: username});
+  array = udata3.log;
+
+  for(i in array){
+    const order = {
+      username : username,
+      stockname : array[i].stockname,
+      exprice : array[i].ex_price,
+      quantity : randINT(1, array[i].quantity),
+      ordertime : "intraday",
+      direction : "SELL"
+    }
+    console.log(order);
+    const x = await sell_handle(order);
+    console.log(x);
+  }
 }
 
 const tdata = async () => {
-  const usern = 1;
-  const stockn = randINT(0, 49);
-  const quqn = randINT(1,20);
+  const usern = randINT(1,3);
+  const stockn = randINT(0, 15);
+  const quqn = randINT(1,10);
   const dirn = randINT(1,2);
   const odtn = randINT(1,2);
   
@@ -120,11 +122,7 @@ const tdata = async () => {
     ordertime : "delivery"
   }
   console.log(stockname);
-  // console.log(order);
-  // await limit.updateOne(
-  //   { stockname: stockname },
-  //   { $push: { log: order} }
-  // );
+  console.log("np" + usern);
   const x = await buy_handle(order);
   console.log(x);
 }
@@ -138,9 +136,8 @@ async function abc(){
                 "TATAMOTORS", "TATASTEEL", "TCS", "TECHM", "TITAN", "ULTRACEMCO", "UPL", "WIPRO"];
   
                 for( i in array){
-                  await limitexe(array[i]);
+                  limitexe(array[i]);
                 }
-                // await limitexe("NESTLEIND");
 }
 
 async function xyz(){
@@ -152,41 +149,39 @@ async function xyz(){
                 "TATAMOTORS", "TATASTEEL", "TCS", "TECHM", "TITAN", "ULTRACEMCO", "UPL", "WIPRO"];
   
                 for( i in array){
-                  // console.log(i);
                   var newentry = new limit({
                     stockname : array[i],
                     log : []
                   });
-        
-                  newentry.save(function(err, Person){
-                    if(err)
-                      console.log(err);
-                    else
-                      console.log('Success entry');
-                  });
+                  console.log(newentry);
+                  newentry.save();
                 }
 }
 
-async function rtg() {
-  try {
-      const updatedUser = await Users.findOneAndUpdate(
-          { username: "np1" },
-          { $inc: { balance: 10000000 } },
-          { new: true } // This option returns the updated document
-      );
-
-      if (updatedUser) {
-          console.log("User balance updated:", updatedUser);
-      } else {
-          console.log("User not found.");
-      }
-  } catch (error) {
-      console.error("Error updating user balance:", error);
-  }
-}
-
 // Call the async function
+async function rtg(){
 
+  const x = await td_log.aggregate([
+    {
+        $match: {
+            "username": "np1",
+            "delivery": {
+                $elemMatch: {
+                    "stockname": "DRREDDY",
+                }
+            }
+        }
+        },
+        { $unwind: "$delivery" },
+        { $match: {
+            "delivery.stockname": "DRREDDY"
+        }},
+        { $replaceRoot: {
+            newRoot: "$delivery"
+        }}
+    ]);
+    console.log(x);
+}
 
 
 

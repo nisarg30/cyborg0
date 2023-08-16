@@ -2,21 +2,19 @@ const fetch123 = require('./limit_fetch');
 const limit = require('../models/limit.js');
 const buy_post = require('./buy_post');
 const sell_post = require('./sell_post');
+const moment = require('moment');
 
-module.exports = async function limit_execution(stockname){
-
-    
+module.exports = async function limit_execution(stockname){    
     stockname = stockname.toUpperCase();
     var info = await fetch123(stockname);
     info[1] = parseFloat(info[1]);
     info[2] = parseFloat(info[2]);
-    console.log(info);
     const minExPrice = Math.min(info[1], info[2]);
     const maxExPrice = Math.max(info[1], info[2]);
 
     const logTime = moment.tz(this.ordertime, 'Asia/Kolkata');
     const timeString = logTime.format('HH:mm:ss');
-
+    console.log(timeString);
     var data = await limit.find({
         'stockname': stockname,
         'log.$.time' : { $lte : timeString },
