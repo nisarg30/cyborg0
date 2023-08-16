@@ -21,14 +21,14 @@ getConnection = async () => {
     ).then(async () => {
       console.log('Connection to DB Successful');
       // await xyz();
-      // for(var i=0; i<15; i++){
+      // for(var i=0; i<20; i++){
       //   await tdata();
       //   console.log(i);
       // }
       // await abc();
       // await sdata();
-      // await abc();
-      await rtg();
+      await abc(); 
+      // await rtg();
     });
   } catch (err) {
     console.error('Connection to DB Failed:', err);
@@ -55,7 +55,7 @@ const sdata = async () => {
       ordertime : "intraday",
       direction : "SELL"
     }
-    console.log(order);
+    // console.log(order);
     const x = await sell_handle(order);
     console.log(x);
   }
@@ -73,7 +73,7 @@ const sdata = async () => {
       ordertime : "intraday",
       direction : "SELL"
     }
-    console.log(order);
+    // console.log(order);
     const x = await sell_handle(order);
     console.log(x);
   }
@@ -87,11 +87,11 @@ const sdata = async () => {
       username : username,
       stockname : array[i].stockname,
       exprice : array[i].ex_price,
-      quantity : randINT(1, array[i].quantity),
+      quantity : array[i].quantity,
       ordertime : "intraday",
       direction : "SELL"
     }
-    console.log(order);
+    // console.log(order);
     const x = await sell_handle(order);
     console.log(x);
   }
@@ -119,7 +119,7 @@ const tdata = async () => {
     ex_price : pp,
     quantity : quqn,
     direction : "BUY",
-    ordertime : "delivery"
+    ordertime : "intraday"
   }
   console.log(stockname);
   console.log("np" + usern);
@@ -161,26 +161,14 @@ async function xyz(){
 // Call the async function
 async function rtg(){
 
-  const x = await td_log.aggregate([
-    {
-        $match: {
-            "username": "np1",
-            "delivery": {
-                $elemMatch: {
-                    "stockname": "DRREDDY",
-                }
-            }
-        }
-        },
-        { $unwind: "$delivery" },
-        { $match: {
-            "delivery.stockname": "DRREDDY"
-        }},
-        { $replaceRoot: {
-            newRoot: "$delivery"
-        }}
-    ]);
-    console.log(x);
+  const logpipeline = [
+    { $match: { username : "np1" } },
+    { $unwind: '$log' },
+    { $match: { 'log.stockname':  order.stockname} },
+    { $replaceRoot: { newRoot: '$log' } }
+  ];
+
+const logElement = await Users.aggregate(logpipeline);
 }
 
 

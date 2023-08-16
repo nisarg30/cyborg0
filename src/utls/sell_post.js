@@ -90,7 +90,7 @@ module.exports = async function sellLimitPostExecution(order) {
             const incSellprice = (((logosEntry.sell_price * logosEntry.quantity) + (order.exprice * order.quantity)) /
                 (logosEntry.quantity + order.quantity)) - logosEntry.sell_price;
             const incQuantity = order.quantity;
-            const incRealised = (logosEntry.sell_price - logosEntry.buy_price + incSellprice) * (logosEntry.quantity + order.quantity);
+            const incRealised = (logosEntry.sell_price - logosEntry.buy_price + incSellprice) * (order.quantity);
 
             // Update the intraday trade log with the modified entry
             const result = await TradeLogModel.updateOne(
@@ -99,7 +99,7 @@ module.exports = async function sellLimitPostExecution(order) {
                     $inc: {
                         'intraday.$[i].logos.$[j].sell_price': incSellprice,
                         'intraday.$[i].logos.$[j].quantity': incQuantity,
-                        'intraday.$[i].logos.$[j].sell_price': incRealised,
+                        'intraday.$[i].logos.$[j].realised': incRealised,
                     },
                 },
                 {

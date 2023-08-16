@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
-userSchema = new Schema({
+const userSchema = new Schema({
 	
 	email: String,
 	username: String,
@@ -15,6 +15,13 @@ userSchema = new Schema({
         buy_price   : Number
 	}]
 },{ collection: 'user'});
+
+userSchema.pre('save', function (next) {
+	if (this.isModified('valueToRound')) {
+	  this.valueToRound = Math.round(this.valueToRound * 100) / 100; // Round to 2 decimal places
+	}
+	next();
+});
 
 User = mongoose.model('Users', userSchema);
 

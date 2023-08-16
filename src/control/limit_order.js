@@ -101,16 +101,18 @@ async function buy_handle(order){
             { $replaceRoot: { newRoot: '$log' } }
         ];
         
-        const logElement = await Users.aggregate(logpipeline);
+        const logElement = await op_logs.aggregate(logpipeline);
+        // console.log(logElement);
         if(logElement.length <= 0) {
             const newlogElement = {
                 stockname : order.stockname,
                 quantity : 0,
-                buy_price : 0
+                ex_price : 0
             }
             const filter = { username : order.username };
             const update = { $push: { log: newlogElement } };
-            const result = await Users.updateOne(filter, update);
+            const result = await op_logs.updateOne(filter, update);
+            // console.log(result);
         }
 
         // intraday presetting
@@ -142,24 +144,23 @@ async function buy_handle(order){
             const existingIntradayTradeIndex = intradayArray.findIndex(item => item.stockname === order.stockname);
             if (existingIntradayTradeIndex === -1) {
                 // Update existing intraday trade
-                intradayArray.push({
+                const entry = {
                     stockname: order.stockname,
                     quantity: 0,
                     buy_price: 0,
                     sell_price: 0,
                     realised: 0
-                });
+                }
+
+                await td_logs.findOneAndUpdate(
+                    intradayQuery,
+                    {
+                        $push: { 'intraday.$.logos': entry }
+                    },
+                );
             }
             // Update and save the intraday log
-            const intradayUpdate = { 'intraday.$.logos': intradayArray };
-            await td_logs.findOneAndUpdate(
-                intradayQuery,
-                { $set: intradayUpdate }
-            );
         }    
-    }
-    else {
-        
     }
 
     await op_logs.updateOne(
@@ -225,7 +226,7 @@ async function sell_handle(order) {
         );
     }
     else{
-        
+
         const odata = await op_logs.findOne({
             "username" : order.username, 
         });

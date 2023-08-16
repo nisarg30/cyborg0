@@ -20,7 +20,7 @@ module.exports = async function executeBuyLimitOrder(order) {
             { $replaceRoot: { newRoot: '$portfolio' } }
         ];
         
-        const portfolioElement = await Users.aggregate(pipeline);
+        const portfolioElement = await UsersModel.aggregate(pipeline);
         const incBuyprice = (((portfolioElement[0].buy_price*portfolioElement[0].quantity) + (order.quantity * order.exprice))/(order.quantity + portfolioElement[0].quantity)) - portfolioElement[0].buy_price;
         const incQuantity = order.quantity ;
 
@@ -59,10 +59,10 @@ module.exports = async function executeBuyLimitOrder(order) {
                 { $replaceRoot: { newRoot: '$log' } }
             ];
             
-            const logElement = await Users.aggregate(pipeline);
-            const incBuyprice = (((logElement[0].ex_price*logElement[0].quantity) + (order.quantity * order.exprice))/(order.quantity + portfolioElement[0].quantity)) - logElement[0].buy_price;
+            var logElement = await OpenTradesModel.aggregate(pipeline);
+            logElement = logElement[0];
+            const incBuyprice = (((logElement.ex_price*logElement.quantity) + (order.quantity * order.exprice))/(order.quantity + logElement.quantity)) - logElement.ex_price;
             const incQuantity = order.quantity ;
-
             await OpenTradesModel.updateOne(
                 { username : order.username, 'log.stockname': order.stockname },
                 {
@@ -110,7 +110,7 @@ module.exports = async function executeBuyLimitOrder(order) {
                 { "username": order.username, 'intraday.date': todayDate, 'intraday.logos.stockname': order.stockname },
                 {
                     $inc: {
-                        'intraday.$[i].logos.$[j].buy_price': intradayEntry
+                        'intraday.$[i].logos.$[j].buy_price': incIntratradebuyprice
                     },
                 },
                 {

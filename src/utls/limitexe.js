@@ -14,7 +14,7 @@ module.exports = async function limit_execution(stockname){
 
     const logTime = moment.tz(this.ordertime, 'Asia/Kolkata');
     const timeString = logTime.format('HH:mm:ss');
-    console.log(timeString);
+    // console.log(timeString);
     var data = await limit.find({
         'stockname': stockname,
         'log.$.time' : { $lte : timeString },
