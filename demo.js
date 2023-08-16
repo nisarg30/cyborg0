@@ -26,7 +26,7 @@ getConnection = async () => {
       //   console.log(i);
       // }
       // await abc();
-      // await sdata();
+      await sdata();
       await abc(); 
       // await rtg();
     });
@@ -43,16 +43,16 @@ function randINT(min, max) {
 
 const sdata = async () => {
   var username = "np" + "1";
-  const udata1 = await op_log.findOne({ username: username});
-  var array = udata1.log;
+  const udata1 = await Users.findOne({ username: username});
+  var array = udata1.portfolio;
 
   for(i in array){
     const order = {
       username : username,
       stockname : array[i].stockname,
-      exprice : array[i].ex_price,
+      exprice : array[i].buy_price,
       quantity : array[i].quantity,
-      ordertime : "intraday",
+      ordertime : "delivery",
       direction : "SELL"
     }
     // console.log(order);
@@ -61,16 +61,16 @@ const sdata = async () => {
   }
 
   username = "np" + "2";
-  const udata2 = await op_log.findOne({ username: username});
-  array = udata2.log;
+  const udata2 = await Users.findOne({ username: username});
+  array = udata2.portfolio;
 
   for(i in array){
     const order = {
       username : username,
       stockname : array[i].stockname,
-      exprice : array[i].ex_price,
+      exprice : array[i].buy_price,
       quantity : array[i].quantity,
-      ordertime : "intraday",
+      ordertime : "delivery",
       direction : "SELL"
     }
     // console.log(order);
@@ -79,16 +79,16 @@ const sdata = async () => {
   }
 
   username = "np" + "3";
-  const udata3 = await op_log.findOne({ username: username});
-  array = udata3.log;
+  const udata3 = await Users.findOne({ username: username});
+  array = udata3.portfolio;
 
   for(i in array){
     const order = {
       username : username,
       stockname : array[i].stockname,
-      exprice : array[i].ex_price,
+      exprice : array[i].buy_price,
       quantity : array[i].quantity,
-      ordertime : "intraday",
+      ordertime : "delivery",
       direction : "SELL"
     }
     // console.log(order);
@@ -119,7 +119,7 @@ const tdata = async () => {
     ex_price : pp,
     quantity : quqn,
     direction : "BUY",
-    ordertime : "intraday"
+    ordertime : "delivery"
   }
   console.log(stockname);
   console.log("np" + usern);

@@ -40,7 +40,7 @@ module.exports = async function executeBuyLimitOrder(order) {
             direction : "BUY",
             quantity : order.quantity
         }
-
+        
         await TradeLogModel.findOneAndUpdate(
             { username: order.username, 'delivery.stockname': order.stockname },
             {

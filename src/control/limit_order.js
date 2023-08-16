@@ -75,7 +75,7 @@ async function buy_handle(order){
                     dlog: []
                 };
                 
-                td_logs.updateOne(
+                await td_logs.updateOne(
                     { username: order.username },
                     { $push: { delivery: newDeliveryItem } }
                 )
