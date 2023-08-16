@@ -10,7 +10,7 @@ const { renderFile } = require('ejs');
 const sellod = require('../control/sellod');
 const buyod = require('../control/buyod');
 const maintain = require('../control/op_log_maintain');
-// const demo = require('../../../cyborg0/demo');
+
 const { buy_handle, sell_handle } = require('../control/limit_order'); 
 //login routes
 router.get('/', function (req, res, next) {
@@ -134,7 +134,7 @@ router.post('/limit', async function(req, res, next) {
 	else{
 		await sell_handle(order);
 	}
-	res.send("sucess");
+	res.send({sucess : "limit order placed"});
 });
 //export
 module.exports = router;
