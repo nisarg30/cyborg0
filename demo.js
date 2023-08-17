@@ -26,9 +26,9 @@ getConnection = async () => {
       //   console.log(i);
       // }
       // await abc();
-      await sdata();
-      await abc(); 
-      // await rtg();
+      // await sdata();
+      // await abc(); 
+      await rtg();
     });
   } catch (err) {
     console.error('Connection to DB Failed:', err);
@@ -161,14 +161,7 @@ async function xyz(){
 // Call the async function
 async function rtg(){
 
-  const logpipeline = [
-    { $match: { username : "np1" } },
-    { $unwind: '$log' },
-    { $match: { 'log.stockname':  order.stockname} },
-    { $replaceRoot: { newRoot: '$log' } }
-  ];
-
-const logElement = await Users.aggregate(logpipeline);
+  
 }
 
 

@@ -6,6 +6,11 @@ const fs = require('fs');
 const { json } = require('body-parser');
 const path = require('path');
 
+function roundToTwo(value) {
+    const roundedValue = Math.round(value * 100) / 100;
+    return roundedValue;
+}
+
 module.exports = async function executeBuyLimitOrder(order) {
     try {
 
@@ -21,7 +26,7 @@ module.exports = async function executeBuyLimitOrder(order) {
         ];
         
         const portfolioElement = await UsersModel.aggregate(pipeline);
-        const incBuyprice = (((portfolioElement[0].buy_price*portfolioElement[0].quantity) + (order.quantity * order.exprice))/(order.quantity + portfolioElement[0].quantity)) - portfolioElement[0].buy_price;
+        const incBuyprice = roundToTwo((((portfolioElement[0].buy_price*portfolioElement[0].quantity) + (order.quantity * order.exprice))/(order.quantity + portfolioElement[0].quantity)) - portfolioElement[0].buy_price);
         const incQuantity = order.quantity ;
 
         await UsersModel.updateOne(
@@ -61,7 +66,7 @@ module.exports = async function executeBuyLimitOrder(order) {
             
             var logElement = await OpenTradesModel.aggregate(pipeline);
             logElement = logElement[0];
-            const incBuyprice = (((logElement.ex_price*logElement.quantity) + (order.quantity * order.exprice))/(order.quantity + logElement.quantity)) - logElement.ex_price;
+            const incBuyprice = roundToTwo((((logElement.ex_price*logElement.quantity) + (order.quantity * order.exprice))/(order.quantity + logElement.quantity)) - logElement.ex_price);
             const incQuantity = order.quantity ;
             await OpenTradesModel.updateOne(
                 { username : order.username, 'log.stockname': order.stockname },
@@ -104,7 +109,7 @@ module.exports = async function executeBuyLimitOrder(order) {
             ]);
 
             const intradayEntry = x[0];
-            const incIntratradebuyprice = (intradayEntry.buy_price * intradayEntry.quantity) + (order.quantity*order.exprice)/(order.quantity + intradayEntry.quantity) - intradayEntry.buy_price;
+            const incIntratradebuyprice = roundToTwo((intradayEntry.buy_price * intradayEntry.quantity) + (order.quantity*order.exprice)/(order.quantity + intradayEntry.quantity) - intradayEntry.buy_price);
             
             const result = await TradeLogModel.updateOne(
                 { "username": order.username, 'intraday.date': todayDate, 'intraday.logos.stockname': order.stockname },

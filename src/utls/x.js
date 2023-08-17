@@ -75,9 +75,7 @@ async function fetch(stn){
     
     chart.onUpdate(async () => {
         // console.log(chart.infos.name);
-        // limitexe(chart.infos.name).then(async () => {
-        //   console.log("limitexe successfully updated");
-        // });
+        const y = await limitexe(chart.infos.name);
         const x = await write(parseInt(obj[chart.infos.name]) ,chart.periods[0].close);
     });
 }

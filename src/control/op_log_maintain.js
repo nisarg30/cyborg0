@@ -13,8 +13,8 @@ async function up(log, day_obj) {
             console.log(x);
                 for (const i in day_obj) {
                     if (day_obj[i].stockname === e.stockname) {
+                        day_obj[i].sell_price = ((day_obj[i].sell_price * (day_obj[i].quantity)) + (x * e.quantity)) / (day_obj[i].quantity + e.quantity);
                         day_obj[i].quantity += e.quantity;
-                        day_obj[i].sell_price = ((day_obj[i].sell_price * (day_obj[i].quantity)) + (x * e.quantity)) / (day_obj[i].quantity);
                         day_obj[i].realised = (day_obj[i].sell_price - day_obj[i].buy_price) * day_obj[i].quantity;
                         balupdate = balupdate + (x*e.quantity);
                     }

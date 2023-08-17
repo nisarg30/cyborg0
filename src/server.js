@@ -61,24 +61,43 @@ app.use(function (err, req, res, next) {
     res.send(err.message);
 });
 
-// function requestschedule(){
-//   var url = 'http://localhost:4000/maintainance';
+function requestschedule1(){
+  var url = 'http://localhost:4000/maintainance';
 	
-// 	var info ={
-// 		method : 'POST',
-// 		uri    :  url,
-// 		body   :  {'permisiion': "execute!"},
-// 		json   :  true
-// 	};
+	var info ={
+		method : 'POST',
+		uri    :  url,
+		body   :  {'permisiion': "execute!"},
+		json   :  true
+	};
 
-//   request(info).then(async function(parsedBody){
-//     console.log(parsedBody);
-//   });
-// }
+  request(info).then(async function(parsedBody){
+    console.log(parsedBody);
+  });
+}
 
-// cron.schedule("51 12 * * *", function(){
-//   requestschedule();
-// });
+function requestschedule2(){
+  var url = 'http://localhost:4000/limitmaintainance';
+	
+	var info ={
+		method : 'POST',
+		uri    :  url,
+		body   :  {'permisiion': "execute!"},
+		json   :  true
+	};
+
+  request(info).then(async function(parsedBody){
+    console.log(parsedBody);
+  });
+}
+
+cron.schedule("30 15 * * 1-5", function(){
+  requestschedule1();
+});
+
+cron.schedule("00 16 * * 1-5", function(){
+  requestschedule2();
+});
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, function () {

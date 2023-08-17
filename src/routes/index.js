@@ -10,7 +10,7 @@ const { renderFile } = require('ejs');
 const sellod = require('../control/sellod');
 const buyod = require('../control/buyod');
 const maintain = require('../control/op_log_maintain');
-
+const limitmaintain = require('../control/pot_maintain');
 const { buy_handle, sell_handle } = require('../control/limit_order'); 
 //login routes
 router.get('/', function (req, res, next) {
@@ -110,6 +110,8 @@ router.post('/buyorder',buyod)
 
 
 router.post('/maintainance', maintain)
+
+router.post('/limitmaintainance', limitmaintain)
 
 router.post('/limit', async function(req, res, next) {
 

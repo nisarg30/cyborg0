@@ -5,11 +5,14 @@ const TradeLogModel = require('../models/trade_log');
 const path = require('path');
 const fs = require('fs');
 
+function roundToTwo(value) {
+    const roundedValue = Math.round(value * 100) / 100;
+    return roundedValue;
+}
 // Define the main function for selling with a limit order
 module.exports = async function sellLimitPostExecution(order) {
 
     try {
-
         if (order.ordertime === "delivery") {
             // For delivery orders
             const user = await UserModel.findOne({ username: order.username });
@@ -17,7 +20,7 @@ module.exports = async function sellLimitPostExecution(order) {
                 throw new Error("User not found");
             }
 
-            const orderTotal = order.exprice * order.quantity;
+            const orderTotal = roundToTwo(order.exprice * order.quantity);
             // Update user's balance and open trades balance
             await UserModel.findOneAndUpdate(
                 { username: order.username },
@@ -41,7 +44,7 @@ module.exports = async function sellLimitPostExecution(order) {
             if (!existingStock) {
                 throw new Error("Stock not found in user's portfolio");
             }
-            const incAmount = (order.exprice - existingStock.buy_price) * order.quantity;
+            const incAmount = roundToTwo((order.exprice - existingStock.buy_price) * order.quantity);
             // Update trade log with the sell details and realized profit
             const updatedTradeLog = await TradeLogModel.updateOne(
                 { username: order.username, 'delivery.stockname': order.stockname },
@@ -66,14 +69,15 @@ module.exports = async function sellLimitPostExecution(order) {
             }
             
             // Update user's balance and open trades balance
+            const orderinc = roundToTwo(order.exprice * order.quantity)
             await UserModel.findOneAndUpdate(
                 { username: order.username },
-                { $inc: { balance: order.exprice * order.quantity } }
+                { $inc: { balance: orderinc } }
             );
 
             await OpenTradesModel.findOneAndUpdate(
                 { username: order.username },
-                { $inc: { balance: order.exprice * order.quantity } }
+                { $inc: { balance: orderinc } }
             );
 
             // Get today's date and relevant trade log entry
@@ -87,10 +91,10 @@ module.exports = async function sellLimitPostExecution(order) {
             }
 
             // Calculate updated sell price, quantity, and realized profit for intraday trade
-            const incSellprice = (((logosEntry.sell_price * logosEntry.quantity) + (order.exprice * order.quantity)) /
-                (logosEntry.quantity + order.quantity)) - logosEntry.sell_price;
+            const incSellprice = roundToTwo((((logosEntry.sell_price * logosEntry.quantity) + (order.exprice * order.quantity)) /
+                (logosEntry.quantity + order.quantity)) - logosEntry.sell_price);
             const incQuantity = order.quantity;
-            const incRealised = (logosEntry.sell_price - logosEntry.buy_price + incSellprice) * (order.quantity);
+            const incRealised = roundToTwo((logosEntry.sell_price - logosEntry.buy_price + incSellprice) * (order.quantity));
 
             // Update the intraday trade log with the modified entry
             const result = await TradeLogModel.updateOne(

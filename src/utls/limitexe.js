@@ -2,7 +2,7 @@ const fetch123 = require('./limit_fetch');
 const limit = require('../models/limit.js');
 const buy_post = require('./buy_post');
 const sell_post = require('./sell_post');
-const moment = require('moment');
+const moment = require('moment-timezone');
 
 module.exports = async function limit_execution(stockname){    
     stockname = stockname.toUpperCase();
