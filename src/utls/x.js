@@ -85,6 +85,7 @@ async function write(targetRow, newValue) {
   const filePath = path.resolve(__dirname,'data.csv');
   try {
     var data = await fs.readFile(filePath, 'utf8');
+    fs.close();
     var rows = data.trim().split('\n'); // Split by lines
     // console.log(data);
     if (targetRow < 0 || targetRow >= rows.length) {
@@ -107,6 +108,7 @@ async function write(targetRow, newValue) {
     const modifiedCsvData = rows.join('\n');
 
     await fs.writeFile(filePath, modifiedCsvData, 'utf8');
+    fs.close();
     console.log(`Updated row ${targetRow}: ${columns[0]}, ${columns[1]}, ${columns[2]}`);
   } catch (error) {
     console.error(`Error writing file: ${error.message}`);
