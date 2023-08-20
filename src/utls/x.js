@@ -75,7 +75,9 @@ async function fetch(stn){
     
     chart.onUpdate(async () => {
         // console.log(chart.infos.name);
-        const y = await limitexe(chart.infos.name);
+        limitexe(chart.infos.name).then(() => {
+          console.log(chart.infos.name + " limit executed");
+        });
         const x = await write(parseInt(obj[chart.infos.name]) ,chart.periods[0].close);
     });
 }
@@ -85,7 +87,6 @@ async function write(targetRow, newValue) {
   const filePath = path.resolve(__dirname,'data.csv');
   try {
     var data = await fs.readFile(filePath, 'utf8');
-    fs.close();
     var rows = data.trim().split('\n'); // Split by lines
     // console.log(data);
     if (targetRow < 0 || targetRow >= rows.length) {
@@ -108,7 +109,6 @@ async function write(targetRow, newValue) {
     const modifiedCsvData = rows.join('\n');
 
     await fs.writeFile(filePath, modifiedCsvData, 'utf8');
-    fs.close();
     console.log(`Updated row ${targetRow}: ${columns[0]}, ${columns[1]}, ${columns[2]}`);
   } catch (error) {
     console.error(`Error writing file: ${error.message}`);

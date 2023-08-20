@@ -8,6 +8,7 @@ const userSchema = new Schema({
 	password: String,
 	passwordConf: String,
 	balance : Number,
+	limitcount : Number,
 	portfolio: [{
 		_id : false,
 		stockname  : String,

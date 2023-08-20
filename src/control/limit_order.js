@@ -24,6 +24,9 @@ async function buy_handle(order){
         {
             $set : {
                 balance : udata.balance - (order.quantity*exprice),
+            },
+            $inc : {
+                limitcount : 1
             }
         }
     );
@@ -220,13 +223,22 @@ async function sell_handle(order) {
             { "username" : order.username, "portfolio.stockname" : order.stockname},
             {
                 $inc : {
-                    'portfolio.$.quantity': -order.quantity
+                    'portfolio.$.quantity': -order.quantity,
+                    'limitcount' : 1
                 }
             }
         );
     }
     else{
 
+        await Users.updateOne(
+            { "username" : order.username, "portfolio.stockname" : order.stockname},
+            {
+                $inc : {
+                    'limitcount' : 1
+                }
+            }
+        );
         const odata = await op_logs.findOne({
             "username" : order.username, 
         });

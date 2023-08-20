@@ -13,6 +13,14 @@ function roundToTwo(value) {
 module.exports = async function sellLimitPostExecution(order) {
 
     try {
+        await UsersModel.updateOne(
+            { username : order.username },
+            {
+                $inc : {
+                    limitcount : -1,
+                }
+            }
+        );
         if (order.ordertime === "delivery") {
             // For delivery orders
             const user = await UserModel.findOne({ username: order.username });

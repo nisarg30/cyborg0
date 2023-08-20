@@ -20,6 +20,11 @@ module.exports = async function limit_execution(stockname){
         'log.$.time' : { $lte : timeString },
         'log.$.ex_price': { $gte: minExPrice, $lte: maxExPrice }
     });
+
+    await limit.updateMany(
+        { stockname : stockname },
+        { $pull: { log: { ex_price: { $gte: minExPrice, $lte: maxExPrice }, time: { $lte : timeString } } } }
+    );
     // console.log(data);
     data = data[0].log;
     // console.log(data.log);
@@ -42,10 +47,5 @@ module.exports = async function limit_execution(stockname){
             console.log(x);
         }
     }
-
-    await limit.updateMany(
-        { stockname : stockname },
-        { $pull: { log: { ex_price: { $gte: minExPrice, $lte: maxExPrice }, time: { $lte : timeString } } } }
-    );
     return;
 }

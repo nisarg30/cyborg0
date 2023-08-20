@@ -12,6 +12,8 @@ const buyod = require('../control/buyod');
 const maintain = require('../control/op_log_maintain');
 const limitmaintain = require('../control/pot_maintain');
 const { buy_handle, sell_handle } = require('../control/limit_order'); 
+const reset_user = require('../control/reset_user');
+const deleteuser = require('../control/delete_user');
 //login routes
 router.get('/', function (req, res, next) {
 	return res.render('login.ejs');
@@ -112,6 +114,10 @@ router.post('/buyorder',buyod)
 router.post('/maintainance', maintain)
 
 router.post('/limitmaintainance', limitmaintain)
+
+router.post('/deleteuser', deleteuser)
+
+router.post('/resetuser', reset_user)
 
 router.post('/limit', async function(req, res, next) {
 

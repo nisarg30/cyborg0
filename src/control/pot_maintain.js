@@ -2,7 +2,7 @@ const Users = require('../models/user.js');
 const td_logs = require('../models/trade_log.js');
 const op_logs = require('../models/open_trades.js');
 
-async function limit_maintain(req, res){
+module.exports = async function limit_maintain(req, res){
 
     const removeCriteria = {
         'portfolio.quantity': 0,
@@ -51,5 +51,3 @@ async function limit_maintain(req, res){
 
     res.send({success : "limit maintainance performed"});
 }
-
-limit_maintain();

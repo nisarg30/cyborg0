@@ -6,6 +6,11 @@ const op_logs = require('../models/open_trades');
 const td_logs = require('../models/trade_log');
 const fetchStockPrice = require('../utls/s_price');
 
+function roundToTwo(value) {
+    const roundedValue = Math.round(value * 100) / 100;
+    return roundedValue;
+}
+
 module.exports = async function (req, res) {
     console.log(req.session.userId);
 
@@ -37,25 +42,25 @@ module.exports = async function (req, res) {
             const existingStock = portfolio.find(stock => stock.stockname === stockName);
 
             // Update user's balance and portfolio
+            const amttoinc = roundToTwo(quantity*exPrice);
             await op_logs.updateOne(
                 { username: req.session.userId },
-                { $set: { balance: user.balance - (quantity * exPrice) } }
+                { $inc: { balance: - amttoinc } }
             );
 
             if (!existingStock) {
                 // Add new stock to user's portfolio
-                portfolio.push({
+                const element = {
                     stockname: stockName,
                     buy_price: exPrice,
                     quantity: quantity
-                });
+                };
 
                 await Users.updateOne(
                     { username: req.session.userId },
-                    { $set: { 	balance: user.balance - (quantity * exPrice),
-								portfolio: portfolio } }
+                    { $push: { portfolio : element} },
+                    { $inc : { balance : amttoinc } }
                 );
-
             } else {
                 // Update existing stock's details in the portfolio
                 existingStock.buy_price = (existingStock.buy_price * existingStock.quantity + exPrice * quantity) / (existingStock.quantity + quantity);
