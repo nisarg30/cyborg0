@@ -13,7 +13,6 @@ function roundToTwo(value) {
 
 module.exports = async function executeBuyLimitOrder(order) {
     try {
-
         await UsersModel.updateOne(
             { username : order.username },
             {
@@ -63,7 +62,6 @@ module.exports = async function executeBuyLimitOrder(order) {
 
         } else {
             // Handle non-delivery order
-
             // Update open trades
             const pipeline = [
                 { $match: { username : order.username } },

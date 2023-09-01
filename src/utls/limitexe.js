@@ -6,11 +6,9 @@ const moment = require('moment-timezone');
 
 module.exports = async function limit_execution(stockname){    
     stockname = stockname.toUpperCase();
-    var info = await fetch123(stockname);
-    info[1] = parseFloat(info[1]);
-    info[2] = parseFloat(info[2]);
-    const minExPrice = Math.min(info[1], info[2]);
-    const maxExPrice = Math.max(info[1], info[2]);
+    var data = await fetch123(stockname);
+    const minExPrice = Math.min(data.curr, data.prev);
+    const maxExPrice = Math.max(data.curr, data.prev);
 
     const logTime = moment.tz(this.ordertime, 'Asia/Kolkata');
     const timeString = logTime.format('HH:mm:ss');

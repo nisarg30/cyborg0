@@ -1,6 +1,5 @@
 var express = require('express');
-var env = require('dotenv').config()
-var ejs = require('ejs');
+require('dotenv').config(); // Load environment variables from .env into process.env
 var path = require('path');
 var app = express();
 var bodyParser = require('body-parser');
@@ -9,9 +8,12 @@ var session = require('express-session');
 var MongoStore = require('connect-mongo')(session);
 var request = require('request-promise');
 var cron = require("node-cron")
+var cors = require('cors');
+const fs = require('fs');
+const crypto = require('crypto');
 
 mongoose.set("strictQuery", false);
-mongoose.connect('mongodb+srv://nisargpatel0466:nn__4569@cluster0.lsqbqko.mongodb.net/cyborg0?retryWrites=true&w=majority', {
+mongoose.connect('mongodb+srv://'+process.env.use+':'+process.env.pass+'@cluster0.lsqbqko.mongodb.net/cyborg0?retryWrites=true&w=majority', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }, (err) => {
@@ -26,6 +28,8 @@ var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function () {
 });
+
+app.use(cors());
 
 app.use(session({
   secret: 'work hard',
@@ -97,6 +101,15 @@ cron.schedule("30 15 * * 1-5", function(){
 
 cron.schedule("00 16 * * 1-5", function(){
   requestschedule2();
+});
+
+cron.schedule("00 12 * * 0", function(){
+  const newSecretKey = crypto.randomBytes(32).toString('hex');
+// Update the .env file with the new key
+  const envContent = `SECRET_KEY=${newSecretKey}`;
+  fs.writeFileSync('.env', envContent);
+
+  console.log('Secret key rotated successfully.');
 });
 
 const PORT = process.env.PORT || 4000;

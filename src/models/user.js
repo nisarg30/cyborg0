@@ -6,9 +6,19 @@ const userSchema = new Schema({
 	email: String,
 	username: String,
 	password: String,
-	passwordConf: String,
 	balance : Number,
 	limitcount : Number,
+	watchlists : [{
+		_id : false,
+		watchlist : {
+			_id : false,
+			name : String,
+			array : [{
+				_id : false,
+				stockname : String,
+			}]
+		}}
+	],
 	portfolio: [{
 		_id : false,
 		stockname  : String,
@@ -16,13 +26,6 @@ const userSchema = new Schema({
         buy_price   : Number
 	}]
 },{ collection: 'user'});
-
-userSchema.pre('save', function (next) {
-	if (this.isModified('valueToRound')) {
-	  this.valueToRound = Math.round(this.valueToRound * 100) / 100; // Round to 2 decimal places
-	}
-	next();
-});
 
 User = mongoose.model('Users', userSchema);
 

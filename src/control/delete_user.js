@@ -1,6 +1,6 @@
-const Users = require('./models/user');
-const op_logs = require('./models/open_trades');
-const td_logs = require('./models/trade_log');
+const Users = require('../models/user');
+const op_logs = require('../models/open_trades');
+const td_logs = require('../models/trade_log');
 
 module.exports = async function delete_user(req, res) {
     try {

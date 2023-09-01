@@ -12,7 +12,6 @@ function roundToTwo(value) {
 }
 
 module.exports = async function (req, res) {
-    console.log(req.session.userId);
 
     if (!req.session.userId) {
         return res.send({ Success: "login required." });

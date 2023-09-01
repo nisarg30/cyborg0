@@ -1,64 +1,7 @@
-const fs = require('fs').promises;
-const path = require('path');
 const TradingView = require('@mathieuc/tradingview');
 const limitexe = require('./limitexe');
-
-var obj = {
-  ADANIENT: 0,
-  ADANIPORTS: 1,
-  APOLLOHOSP: 2,
-  ASIANPAINT: 3,
-  AXISBANK: 4,
-  BAJAJ_AUTO: 5,
-  BAJAJFINSV: 6,
-  BAJFINANCE: 7,
-  BHARTIARTL: 8,
-  BPCL: 9,
-  BRITANNIA: 10,
-  CIPLA: 11,
-  COALINDIA: 12,
-  DIVISLAB: 13,
-  DRREDDY: 14,
-  EICHERMOT: 15,
-  GRASIM: 16,
-  HCLTECH: 17,
-  HDFCBANK: 18,
-  HDFCLIFE: 19,
-  HEROMOTOCO: 20,
-  HINDALCO: 21,
-  HINDUNILVR: 22,
-  ICICIBANK: 23,
-  INDUSINDBK: 24,
-  INFY: 25,
-  ITC: 26,
-  JSWSTEEL: 27,
-  KOTAKBANK: 28,
-  LT: 29,
-  LTIM: 30,
-  MARUTI: 31,
-  M_M: 32,
-  NESTLEIND: 33,
-  NTPC: 34,
-  ONGC: 35,
-  POWERGRID: 36,
-  RELIANCE: 37,
-  SBILIFE: 38,
-  SBIN: 39,
-  SUNPHARMA: 40,
-  TATACONSUM: 41,
-  TATAMOTORS: 42,
-  TATASTEEL: 43,
-  TCS: 44,
-  TECHM: 45,
-  TITAN: 46,
-  ULTRACEMCO: 47,
-  UPL: 48,
-  WIPRO: 49
-}
-
-async function xyz(stn) {
-  const d = limitexe(stn);
-}
+const spp = require('../models/stockprice');
+var mongoose = require('mongoose');
 
 async function fetch(stn){
 
@@ -74,49 +17,32 @@ async function fetch(stn){
     });
     
     chart.onUpdate(async () => {
-        // console.log(chart.infos.name);
+      console.log(chart.infos.name);
+        await spp.updateOne(
+          { stockname: chart.infos.name },
+          [{
+            $set: {
+              previousprice: "$currentprice", // Use a string to reference the field
+              currentprice : chart.periods[0].close
+            }
+          }]
+        );
         limitexe(chart.infos.name).then(() => {
           console.log(chart.infos.name + " limit executed");
         });
-        const x = await write(parseInt(obj[chart.infos.name]) ,chart.periods[0].close);
     });
 }
 
-async function write(targetRow, newValue) {
-
-  const filePath = path.resolve(__dirname,'data.csv');
+getConnection = async () => {
   try {
-    var data = await fs.readFile(filePath, 'utf8');
-    var rows = data.trim().split('\n'); // Split by lines
-    // console.log(data);
-    if (targetRow < 0 || targetRow >= rows.length) {
-      console.log("Invalid target row:", targetRow);
-      return;
-    }
+    mongoose.set("strictQuery", false);
+    await mongoose.connect(
+      'mongodb+srv://nisargpatel0466:nn__4569@cluster0.lsqbqko.mongodb.net/cyborg0?retryWrites=true&w=majority',
+      { useNewUrlParser: true }
+    ).then(async () => {
+      console.log('Connection to DB Successful');
 
-    rows[49] = rows[49].substring(0,19);
-    const columns = rows[targetRow].split(','); // Split by commas
-
-    if (columns.length < 3) {
-      console.log("Invalid CSV format in target row:", targetRow);
-      return;
-    }
-
-    columns[2] = columns[1];
-    columns[1] = newValue;
-    rows[targetRow] = columns.join(',');
-
-    const modifiedCsvData = rows.join('\n');
-
-    await fs.writeFile(filePath, modifiedCsvData, 'utf8');
-    console.log(`Updated row ${targetRow}: ${columns[0]}, ${columns[1]}, ${columns[2]}`);
-  } catch (error) {
-    console.error(`Error writing file: ${error.message}`);
-  }
-}
-
-async function start(){
-  var array = [ "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK", "BAJAJ_AUTO", "BAJAJFINSV",
+      var array = [ "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK", "BAJAJ_AUTO", "BAJAJFINSV",
                 "BAJFINANCE", "BHARTIARTL", "BPCL", "BRITANNIA", "CIPLA", "COALINDIA", "DIVISLAB", "DRREDDY",
                 "EICHERMOT", "GRASIM", "HCLTECH", "HDFCBANK", "HDFCLIFE", "HEROMOTOCO", "HINDALCO", "HINDUNILVR",
                 "ICICIBANK", "INDUSINDBK", "INFY", "ITC", "JSWSTEEL", "KOTAKBANK", "LT", "LTIM", "MARUTI", "M_M",
@@ -127,6 +53,10 @@ async function start(){
                   await fetch(array[i]); // Wait for fetch to complete
                   await new Promise(resolve => setTimeout(resolve, 500)); // Wait for the specified delay
                 }
+    });
+  } catch (err) {
+    console.error('Connection to DB Failed:', err);
+  }
 }
 
-start();
+getConnection();

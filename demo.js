@@ -10,8 +10,10 @@ const op_log = require('./src/models/open_trades');
 const limit = require('./src/models/limit.js');
 const fetch123 = require('./src/utls/s_price');
 const limitexe = require('./src/utls/limitexe');
-
+const spp = require('./src/models/stockprice.js')
 const {buy_handle, sell_handle} = require('./src/control/limit_order');
+const TradingView = require('@mathieuc/tradingview');
+
 getConnection = async () => {
   try {
     mongoose.set("strictQuery", false);
@@ -29,6 +31,17 @@ getConnection = async () => {
       // await sdata();
       // await abc(); 
       await rtg();
+      // var array = [ "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK", "BAJAJ_AUTO", "BAJAJFINSV",
+      //           "BAJFINANCE", "BHARTIARTL", "BPCL", "BRITANNIA", "CIPLA", "COALINDIA", "DIVISLAB", "DRREDDY",
+      //           "EICHERMOT", "GRASIM", "HCLTECH", "HDFCBANK", "HDFCLIFE", "HEROMOTOCO", "HINDALCO", "HINDUNILVR",
+      //           "ICICIBANK", "INDUSINDBK", "INFY", "ITC", "JSWSTEEL", "KOTAKBANK", "LT", "LTIM", "MARUTI", "M_M",
+      //           "NESTLEIND", "NTPC", "ONGC", "POWERGRID", "RELIANCE", "SBILIFE", "SBIN", "SUNPHARMA", "TATACONSUM",
+      //           "TATAMOTORS", "TATASTEEL", "TCS", "TECHM", "TITAN", "ULTRACEMCO", "UPL", "WIPRO"];
+
+      //           for (let i in array) {
+      //             await rtg(array[i]); // Wait for fetch to complete
+      //             await new Promise(resolve => setTimeout(resolve, 500)); // Wait for the specified delay
+      //           }
     });
   } catch (err) {
     console.error('Connection to DB Failed:', err);
@@ -156,14 +169,43 @@ async function xyz(){
                   console.log(newentry);
                   newentry.save();
                 }
+
+                for( i in array){
+                  var newentry = new spp({
+                    stockname : array[i],
+                    currentprice : 0,
+                    previousprice : 0,
+                  });
+                  console.log(newentry);
+                  newentry.save();
+                }
 }
 
 // Call the async function
 async function rtg(){
 
+  await Users.updateOne(
+    {
+      username : "np1",
+      "watchlists.watchlist.name": "watch1",
+      "watchlists.watchlist.array": {
+        $not: {
+          $elemMatch: {
+            stockname: "reliance" // Replace with the stock name to check
+          }
+        }
+      }
+    },
+    {
+      $push: {
+        "watchlists.$.watchlist.array": {
+          stockname: "reliance" // Replace with the actual stock name you want to add
+        }
+      }
+    }
+  )
   
 }
-
 
 
 
