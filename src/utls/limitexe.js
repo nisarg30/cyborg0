@@ -19,6 +19,10 @@ module.exports = async function limit_execution(stockname){
         'log.$.ex_price': { $gte: minExPrice, $lte: maxExPrice }
     });
 
+    if(data ==  null) {
+        return;
+    }
+    
     await limit.updateMany(
         { stockname : stockname },
         { $pull: { log: { ex_price: { $gte: minExPrice, $lte: maxExPrice }, time: { $lte : timeString } } } }

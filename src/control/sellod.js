@@ -1,5 +1,3 @@
-const express = require('express');
-const router = express.Router();
 const Users = require('../models/user');
 const op_logs = require('../models/open_trades');
 const td_logs = require('../models/trade_log');

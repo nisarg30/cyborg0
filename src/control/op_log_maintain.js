@@ -22,7 +22,6 @@ async function up(log, day_obj) {
                 resolve();
         });
     }
-
     return {"day_obj" : day_obj, "balupdate" : balupdate};
 }
 

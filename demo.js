@@ -13,7 +13,8 @@ const limitexe = require('./src/utls/limitexe');
 const spp = require('./src/models/stockprice.js')
 const {buy_handle, sell_handle} = require('./src/control/limit_order');
 const TradingView = require('@mathieuc/tradingview');
-
+const path = require('path');
+const fs = require('fs').promises;
 getConnection = async () => {
   try {
     mongoose.set("strictQuery", false);
@@ -181,30 +182,103 @@ async function xyz(){
                 }
 }
 
+async function fetch(stn){
+
+  var passi =  "NSE:" + stn;
+  console.log(passi);
+  const client = new TradingView.Client
+  const chart = new client.Session.Chart();
+  chart.setTimezone('Asia/Kolkata');
+
+  chart.setMarket(passi, {
+      timeframe: '1',
+      range: 1,
+  });
+  
+  chart.onUpdate(async () => {
+    console.log(chart.infos.name);
+      console.log(chart.periods);
+      // client.end();
+  });         
+}
 // Call the async function
 async function rtg(){
 
-  await Users.updateOne(
-    {
-      username : "np1",
-      "watchlists.watchlist.name": "watch1",
-      "watchlists.watchlist.array": {
-        $not: {
-          $elemMatch: {
-            stockname: "reliance" // Replace with the stock name to check
-          }
-        }
-      }
-    },
-    {
-      $push: {
-        "watchlists.$.watchlist.array": {
-          stockname: "reliance" // Replace with the actual stock name you want to add
-        }
-      }
-    }
-  )
-  
+  // const filePath = path.resolve(__dirname,'src/utls/EQUITY_L.csv');
+  // console.log(filePath)
+  // var data = await fs.readFile(filePath, 'utf8');
+  // var rows = data.trim().split('\n'); 
+
+  // for(var i=1; i<rows.length; i++) {
+  //   const dv= rows[i].split(',');
+  //   const stockname = dv[0];
+  //   var data= new spp({
+  //     stockname : stockname,
+  //     previousprice : 0,
+  //     currentprice  : 0,
+  //   });
+
+  //   data.save(function(err, Person){
+  //     if(err)
+  //       console.log(err);
+  //     else
+  //       console.log('Success');
+  //   });
+  // }
+  var array = await spp.find({});
+
+  for (let i in array) {
+    await fetch(array[i].stockname); // Wait for fetch to complete
+    await new Promise(resolve => setTimeout(resolve, 500)); // Wait for the specified delay
+  }
+  // const client = new TradingView.Client();
+
+  // client.onError((...error) => {
+  //   err('Client error', ...error);
+  // });
+
+  // const quoteSession = new client.Session.Quote({
+  //   fields: 'all',
+  // });
+
+  // const BTC = new quoteSession.Market('NSE:CIPLA');
+
+  // BTC.onLoaded(() => {
+  //   console.log('BTCEUR LOADED');
+  // });
+
+  // const keys = [
+  //   'volume', 'update_mode', 'type', 'timezone',
+  //   'short_name', 'rtc_time', 'rtc', 'rchp', 'ch',
+  //   'rch', 'provider_id', 'pro_name', 'pricescale',
+  //   'prev_close_price', 'original_name', 'lp',
+  //   'open_price', 'minmove2', 'minmov', 'lp_time',
+  //   'low_price', 'is_tradable', 'high_price',
+  //   'fractional', 'exchange', 'description',
+  //   'current_session', 'currency_code', 'chp',
+  //   'currency-logoid', 'base-currency-logoid',
+  // ];
+
+  // BTC.onData(async (data) => {
+  //   const rsKeys = Object.keys(data);
+  //   // success('BTCEUR DATA');
+  //   console.log(data);
+  //   if (rsKeys.length <= 2) return;
+
+  //   // keys.forEach((k) => {
+  //   //   if (!rsKeys.includes(k)) {
+  //   //     console.error(`Missing '${k}' key in`, rsKeys);
+  //   //   }
+  //   // });
+
+  //   quoteSession.delete();
+  //   await client.end();
+  //   cb();
+  // });
+
+  // BTC.onError((...error) => {
+  //   console.error('BTCEUR ERROR:', error);
+  // });
 }
 
 

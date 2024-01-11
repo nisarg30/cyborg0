@@ -70,48 +70,57 @@ router.post('/reg', async function(req, res, next) {
 	if(!personInfo.email || !personInfo.username || !personInfo.password){
 		res.send();
 	} else {
-			Users.findOne({username:personInfo.username},async function(err,data){
-				if(!data){
-					
-                    const hashedPassword = await bcrypt.hash(personInfo.password, 10);
-
-						var newPerson = new Users({
-							email:personInfo.email,
-							username: personInfo.username,
-							password: hashedPassword,
-							limitcount : 0,
-							watchlists : [],
-							balance : 1000000,
-							portfolio: []
-						});
-
-						newPerson.save(function(err, Person){
-							if(err)
-								console.log(err);
-							else
-								console.log('Success');
-						});
-
-						var d = new Date().toLocaleDateString();
-						var entry = new td_logs({
-							username : personInfo.username,
-							delivery : [],
-							intraday : 	[],
-						});
-
-						entry.save(async(err,d)=>{
-							if(err)
-								console.log(err);
-							else 
-								console.log("td success");
-						})
-
-					res.send({"Success":"You are regestered,You can login now."});
-				}else{
-					res.send({"Success":"username is already used."});
-				}
+			const udata = await Users.findOne({
+				username : personInfo.username
 			});
-    }
+			const edata = await Users.findOne({
+				email : personInfo.email
+			})
+
+			if(udata){
+				res.status(403).send({"success" : "username already in use"});
+				return;
+			}
+			if(edata){
+				res.status(403).send({"success" : "email already in use"});
+				return;
+			}
+
+			const hashedPassword = await bcrypt.hash(personInfo.password, 10);
+
+			var newPerson = new Users({
+				email:personInfo.email,
+				username: personInfo.username,
+				password: hashedPassword,
+				limitcount : 0,
+				watchlists : [],
+				balance : 1000000,
+				portfolio: []
+			});
+
+			newPerson.save(function(err, Person){
+				if(err)
+					console.log(err);
+				else
+					console.log('Success');
+			});
+
+			var d = new Date().toLocaleDateString();
+			var entry = new td_logs({
+				username : personInfo.username,
+				delivery : [],
+				intraday : 	[],
+			});
+
+			entry.save(async(err,d)=>{
+				if(err)
+					console.log(err);
+				else 
+					console.log("td success");
+			})
+
+			res.status(200).send({"Success":"You are regestered,You can login now."});
+		}
 });
 
 
