@@ -58,7 +58,7 @@ function abc(array, data){
     
         web_socket.fetchData(json_req);
         web_socket.on('tick', receiveTick);
-    
+        s/StockTrigger
         async function receiveTick(data) {
             console.log('receiveTick:::::', data.last_traded_price) ;
             if(data.token !== undefined) {

@@ -13,7 +13,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 mongoose.set("strictQuery", false);
-mongoose.connect('mongodb+srv://'+process.env.use+':'+process.env.pass+'@cluster0.lsqbqko.mongodb.net/cyborg0?retryWrites=true&w=majority', {
+mongoose.connect('mongodb+srv://nisargpatel0466:nn__4569@cluster0.lsqbqko.mongodb.net/cyborg0?retryWrites=true&w=majority', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }, (err) => {

@@ -5,6 +5,7 @@ var td_logs = require('../models/trade_log');
 const bcrypt = require('bcrypt');
 const jwt=require("jsonwebtoken");
 
+const spp = require('../models/stockprice.js')
 const sellod = require('../control/sellod');
 const buyod = require('../control/buyod');
 const maintain = require('../control/op_log_maintain');
@@ -15,49 +16,61 @@ const deleteuser = require('../control/delete_user');
 require('dotenv').config()
 
 //login routes
-router.post("/jwt",async (req,res)=>{
-    const token= req.body.token;
-    jwt.verify(token ,process.env.secret_key, async (err,payload)=>{
-        if(err){
-            console.log(err)
-            return res.status(204).send("--")
-        }
-        const {_id}=payload;
-        
-        return res.status(200).send({id:_id});
-    })
-});
-
 const verifyToken = (req, res, next) => {
-    const token = req.headers.authorization; // Extract the token from the header
+    const token = req.body.token;
     if (!token) {
         return res.status(401).json({ message: 'No token provided' });
     }
 
-    jwt.verify(token, process.env.secret_key, (err, decoded) => {
+    jwt.verify(token, "36a4df6c92e79981ebd6ac4652a9d3695db3a0d3d062c76f4631a6b5098b6e47", (err, decoded) => {
         if (err) {
             return res.status(403).json({ message: 'Failed to authenticate token' });
         }
-        req.session.userId = decoded._id; // Attach the _id to the request object
         next(); // Move to the next middleware
     });
 };
 
+const verifyTokenFirst = (req, res, next) => {
+    const token = req.body.token;
+	console.log(req.body);
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    jwt.verify(token, "36a4df6c92e79981ebd6ac4652a9d3695db3a0d3d062c76f4631a6b5098b6e47", (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ message: 'Failed to authenticate token' });
+        }
+        req.session.userId = decoded._id; 
+        next(); // Move to the next middleware
+    });
+};
+
+router.post('/jwt', verifyTokenFirst,async function(req, res) {
+	const data = await Users.findOne({ username : req.session.userId });
+	res.status(200).send({ success: 'verification successful' , data : data.watchlists});
+	return;
+}); 
+
+// Login route with JWT token generation
 router.post('/', function (req, res, next) {
-	console.log("login");
+    console.log(req.body);
     Users.findOne({ username: req.body.username }, function (err, data) {
         if (data) {
             bcrypt.compare(req.body.password, data.password, function (err, result) {
                 if (result === true) {
-                    const token=jwt.sign({_id:data.username},process.env.secret_key);
-                    res.cookie("jwt",token);
-                    res.status(200).send({token, "success": "You are logged in now."})
+					console.log('abc');
+                    const token = jwt.sign({ _id: data.username }, "36a4df6c92e79981ebd6ac4652a9d3695db3a0d3d062c76f4631a6b5098b6e47");
+					req.session.userId = data.username;
+                    res.cookie("jwt", token, data.watchlists);
+                    res.status(200).send({ token, "success": "You are logged in now." });
                 } else {
-                    res.send({ "success": "Wrong password!" });
+                    res.status(403).send({ "success": "Wrong password!" });
                 }
             });
         } else {
-            res.send({ "success": "This Email Is not registered!" });
+			console.log(err);
+            res.status(404).send({ "success": "This Email Is not registered!" });
         }
     });
 });
@@ -66,9 +79,9 @@ router.post('/', function (req, res, next) {
 
 router.post('/reg', async function(req, res, next) {
 	var personInfo = req.body;
-
+	console.log(personInfo);
 	if(!personInfo.email || !personInfo.username || !personInfo.password){
-		res.send();
+		res.send({ success : "missing info" });
 	} else {
 			const udata = await Users.findOne({
 				username : personInfo.username
@@ -123,6 +136,12 @@ router.post('/reg', async function(req, res, next) {
 		}
 });
 
+router.post('/data', async (req, res) => {
+	console.log('req')
+	var array = await spp.find({}, 'stockname');
+	// console.log(array);
+	res.send(array);
+})
 
 router.post('/market/sellorder',verifyToken,sellod)
 
@@ -161,7 +180,7 @@ router.post('/limit', verifyToken ,async function(req, res, next) {
 	res.send({sucess : "limit order placed"});
 });
 
-router.post('/addstocktowatchlist', verifyToken ,async function(req, res, next) {
+router.post('/addstocktowatchlist', verifyTokenFirst ,async function(req, res, next) {
 	const username = req.session.userId;
 	const watchlistname = req.body.watchlistname;
 	const stockname = req.body.stockname;
@@ -189,22 +208,24 @@ router.post('/addstocktowatchlist', verifyToken ,async function(req, res, next) 
 	return res.send({'success' : "stock added to watchlis"});
 });
 
-router.post('/addwatchlist', verifyToken, async function(req, res, next) {
+router.post('/addwatchlist', verifyTokenFirst,async function(req, res, next) {
 	console.log("add watch list");
 	try {
-		const user = await Users.findOne({ username : req.session.userId, 'watchlists.watchlist.name': req.body.watchname });
+		const user = await Users.findOne({ username : req.session.userId, 'watchlists.watchlist.name': req.body.watchlist });
 		if(user){
 			res.status(404).send({ success : "watchlist already exists"});
 			return;
 		}
 
+		console.log(req.session.userId);
+
 		const entry = {
 			watchlist : {
-				name : req.body.watchname,
+				name : req.body.watchlist,
 				array : []
 			}
 		}
-		await Users.updateOne({username : "np1"},
+		await Users.updateOne({ username : req.session.userId },
 			{
 			$push : {
 				watchlists :  entry 
