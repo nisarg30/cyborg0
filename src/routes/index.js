@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 var Users = require('../models/user');
 var td_logs = require('../models/trade_log');
+const op_logs = require('../models/open_trades.js');
 const bcrypt = require('bcrypt');
 const jwt=require("jsonwebtoken");
 
@@ -32,7 +33,8 @@ const verifyToken = (req, res, next) => {
 
 const verifyTokenFirst = (req, res, next) => {
     const token = req.body.token;
-	console.log(req.body);
+	console.log("verify token first");
+	
     if (!token) {
         return res.status(401).json({ message: 'No token provided' });
     }
@@ -63,7 +65,7 @@ router.post('/', function (req, res, next) {
                     const token = jwt.sign({ _id: data.username }, "36a4df6c92e79981ebd6ac4652a9d3695db3a0d3d062c76f4631a6b5098b6e47");
 					req.session.userId = data.username;
                     res.cookie("jwt", token, data.watchlists);
-                    res.status(200).send({ token, "success": "You are logged in now." });
+                    res.status(200).send({ token, "success": "You are logged in now." , data : data.watchlists});
                 } else {
                     res.status(403).send({ "success": "Wrong password!" });
                 }
@@ -143,9 +145,28 @@ router.post('/data', async (req, res) => {
 	res.send(array);
 })
 
-router.post('/market/sellorder',verifyToken,sellod)
-
-router.post('/market/buyorder',verifyToken ,buyod)
+router.post('/market',verifyTokenFirst,async function(req, res) {
+	if(!req.session.userId)
+	{
+		return res.send({ case : 1000 });
+	}
+	
+	// const order = {
+	// 	username : req.session.userId,
+	// 	stockname : req.body.stockname,
+	// 	quantity : req.body.quantity,
+	// 	ordertime : req.body.ordertime,
+	// 	direction : req.body.direction
+	// }
+	
+	if(req.body.direction == 0){
+		await buyod(req, res);
+	}
+	else{
+		await sellod(req, res);
+	}
+	// res.send({sucess : "limit order placed"});
+})
 
 router.post('/maintainance', maintain)
 
@@ -156,11 +177,11 @@ router.post('/deleteuser', verifyToken ,deleteuser)
 router.post('/resetuser', verifyToken ,reset_user)
 
 //limit order handeling
-router.post('/limit', verifyToken ,async function(req, res, next) {
+router.post('/limit', verifyTokenFirst ,async function(req, res, next) {
 
 	if(!req.session.userId)
 	{
-		return res.send({Success : "login required."});
+		return res.status(200).send({ case : 1000 });
 	}
 	
 	const order = {
@@ -170,14 +191,16 @@ router.post('/limit', verifyToken ,async function(req, res, next) {
 		ordertime : req.body.ordertime,
 		direction : req.body.direction
 	}
+	console.log(order)
 	
-	if(req.body.direction == "BUY"){
-		await buy_handle(order);
+	var x;
+	if(req.body.direction == 0){
+		x = await buy_handle(order);
 	}
 	else{
-		await sell_handle(order);
+		x = await sell_handle(order);
 	}
-	res.send({sucess : "limit order placed"});
+	res.status(200).send(x);
 });
 
 router.post('/addstocktowatchlist', verifyTokenFirst ,async function(req, res, next) {
@@ -225,11 +248,13 @@ router.post('/addwatchlist', verifyTokenFirst,async function(req, res, next) {
 				array : []
 			}
 		}
-		await Users.updateOne({ username : req.session.userId },
+		Users.updateOne({ username : req.session.userId },
 			{
-			$push : {
-				watchlists :  entry 
-			}
+				$push : {
+					watchlists :  entry 
+				}
+			}, () => {
+				console.log("add watchlist");
 			}
 		)
 		res.status(200).send({ success : "watchlist created" });
@@ -240,5 +265,92 @@ router.post('/addwatchlist', verifyTokenFirst,async function(req, res, next) {
 		return;
 	}
 })
+
+router.post('/deletewatchlist', verifyTokenFirst,async function(req, res, next) {
+	console.log("delete watch list");
+	try {
+		await Users.findOneAndUpdate(
+			{ username : req.session.userId },
+			{ $pull: { watchlists: { 'watchlist.name': req.body.watchlistName } } },
+			{ new: false }
+		);
+	
+		res.status(200).send({ success : "watchlist deleted" });
+		return;
+	}
+	catch (err) {
+		console.log(err)
+		res.status(500).send({ error : err });
+		return;
+	}
+})
+
+router.post('/deletestock', verifyTokenFirst,async function(req, res, next) {
+	console.log("delete stock");
+	try {
+		await Users.findOneAndUpdate(
+			{ username : req.session.userId, 'watchlists.watchlist.name': req.body.watchlistName },
+			{ $pull: { 'watchlists.$.watchlist.array': { stockname: req.body.stockName } } },
+			{ new: false }
+		);
+	
+		res.status(200).send({ success : "stockname deleted" });
+		return;
+	}
+	catch (err) {
+		console.log(err);
+		res.status(500).send({ error : err });
+		return;
+	}
+})
+
+router.post('/portfolio', verifyTokenFirst,async (req, res) => { 
+	try {
+		const data = await Users.findOne({ username : req.session.userId });
+		const portfolio = data.portfolio;
+        console.log(data);
+		res.status(200).send({success : 'success', portfolio});
+	} catch (error) {
+		console.log(error);
+	}
+});
+
+router.post('/positions', verifyTokenFirst, async (req, res) => {
+	try {
+		const open_positions = await op_logs.findOne({ username : req.session.userId }, { log : 1});
+		const trade_lgt = await td_logs.aggregate([
+            { $match: { username: req.session.userId } },
+            { $unwind: '$intraday' },
+            { $match: { 'intraday.date': new Date().toLocaleDateString() } },
+            { $project: { _id: 0, logos: '$intraday.logos' } }
+        ]);
+
+		console.log(trade_lgt)
+		res.status(200).send({ ope : open_positions , close : trade_lgt });
+
+	} catch (error) {
+		console.log(error);
+	}
+})
+
+router.post('/orderhistory', verifyTokenFirst,async function(req, res) {
+	try {
+
+		const dateToSearch = new Date().toLocaleDateString();
+		try {
+			const logosForDate = await fetchLogosByDate(dateToSearch);
+			if (logosForDate !== null) {
+				console.log(logosForDate);
+			} else {
+				console.log("No intraday data found for the date", dateToSearch);
+			}
+		} catch (error) {
+			console.error("Error:", error);
+		}
+	} catch (error) {
+		console.log(error);
+		res.status(500).send({ error : error });
+	}
+});
 //export
 module.exports = router;

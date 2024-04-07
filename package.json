@@ -28,8 +28,8 @@
     "pnpm": "^7.27.1",
     "request": "^2.88.2",
     "request-promise": "^4.2.6",
-    "smartapi-javascript": "^1.0.16",
-    "socket.io": "^4.7.2",
+    "smartapi-javascript": "^1.0.23",
+    "socket.io": "^4.7.4",
     "uuidv4": "^6.2.13"
   }
 }

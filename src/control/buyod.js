@@ -11,11 +11,12 @@ function roundToTwo(value) {
     return roundedValue;
 }
 
-module.exports = async function (req, res) {
+// 1000 = login required
+// 1001 = insufficient funds
+// 1002 = order executed 
+// 1005 = error
 
-    if (!req.session.userId) {
-        return res.send({ Success: "login required." });
-    }
+module.exports = async function (req, res) {
 
     const stockName = req.body.stockname;
     const orderTime = req.body.ordertime;
@@ -23,16 +24,16 @@ module.exports = async function (req, res) {
 
     // Fetch the current stock price
     const exPrice = parseFloat(await fetchStockPrice(stockName));
-
+    console.log(exPrice);
     try {
         // Find the user's data
         const user = await Users.findOne({ username: req.session.userId });
 
-        if (orderTime === "delivery") {
+        if (orderTime === 0) {
             // Handle delivery order
             if (user.balance < exPrice * quantity) {
-                return res.send({
-                    success: "insufficient funds.",
+                return res.status(200).send({
+                    case: 1001,
                     available: Math.floor(user.balance / exPrice)
                 });
             }
@@ -42,6 +43,8 @@ module.exports = async function (req, res) {
 
             // Update user's balance and portfolio
             const amttoinc = roundToTwo(quantity*exPrice);
+            console.log(amttoinc, req.session.userId);
+
             await op_logs.updateOne(
                 { username: req.session.userId },
                 { $inc: { balance: - amttoinc } }
@@ -54,12 +57,16 @@ module.exports = async function (req, res) {
                     buy_price: exPrice,
                     quantity: quantity
                 };
-
-                await Users.updateOne(
+                console.log(amttoinc, ":xyz");
+                const x = await Users.updateOne(
                     { username: req.session.userId },
-                    { $push: { portfolio : element} },
-                    { $inc : { balance : amttoinc } }
+                    {
+                        $push: { portfolio: element },
+                        $inc: { balance: amttoinc }
+                    }
                 );
+                
+                console.log(x);
             } else {
                 // Update existing stock's details in the portfolio
                 existingStock.buy_price = (existingStock.buy_price * existingStock.quantity + exPrice * quantity) / (existingStock.quantity + quantity);
@@ -105,7 +112,7 @@ module.exports = async function (req, res) {
                 );
             }
 
-            return res.send({ success: "delivery trade executed." });
+            return res.status(200).send({ case: 1002 });
         } 
 		else {
             // Handle intraday order
@@ -114,7 +121,7 @@ module.exports = async function (req, res) {
             if (opLog) {
                 if (opLog.balance < exPrice * quantity) {
                     return res.send({
-                        success: "insufficient funds.",
+                        case: 1001,
                         available: Math.floor(opLog.balance / exPrice)
                     });
                 }
@@ -158,7 +165,7 @@ module.exports = async function (req, res) {
 
                 if (remainingBalance < 0) {
                     return res.send({
-                        success: "insufficient funds.",
+                        case: 1001,
                         available: Math.floor(userData.balance / exPrice)
                     });
                 }
@@ -224,10 +231,10 @@ module.exports = async function (req, res) {
                 );
             }
 
-            return res.send({ success: "intraday trade executed." });
+            return res.send({case : 1002 });
         }
     } catch (error) {
         console.error(error);
-        return res.status(500).send({ error: "An error occurred." });
+        return res.status(500).send({ error: 1005 });
     }
 };

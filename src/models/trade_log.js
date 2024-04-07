@@ -21,11 +21,11 @@ tradeSchema = new Schema({
             date       : String,
             logos :[{
             _id : false,
-            stockname  : String,
-            quantity   : Number,
-            buy_price  : Number,
-            sell_price : Number,
-            realised   : Number
+                stockname  : String,
+                quantity   : Number,
+                buy_price  : Number,
+                sell_price : Number,
+                realised   : Number
             }]
     }]
 },{ collection: 'trade_log'});

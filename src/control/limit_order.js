@@ -1,20 +1,17 @@
-var express = require('express');
-var router = express.Router();
 const Users = require('../models/user');
 const op_logs = require('../models/open_trades');
 const td_logs = require('../models/trade_log');
 const limit = require('../models/limit.js');
-const fetch123 = require('../utls/s_price');
 const moment = require('moment-timezone');
 
 async function buy_handle(order){
 
-    const exprice = order.ex_price;
+    const exprice = order.exprice;
     const udata = await Users.findOne({username: order.username });
     if(udata){
         if(udata.balance < exprice*order.quantity)
 				{
-					return ({	"success" : "insufficient funds.", 
+					return ({	case : 1001, 
 										"availabel" : Math.floor(udata.balance/exprice)});
 				}
     }
@@ -31,7 +28,7 @@ async function buy_handle(order){
         }
     );
 
-    if(order.ordertime === 'delivery'){
+    if(order.ordertime === 0){
         const pipeline = [
             { $match: { username : order.username } },
             { $unwind: '$portfolio' },
@@ -84,7 +81,7 @@ async function buy_handle(order){
                 )
             }
     }
-    else if(order.ordertime === 'intraday'){
+    else if(order.ordertime === 1){
         //new op_logs entry
         const odata = await op_logs.findOne({username : order.username});
         if(!odata) {
@@ -198,12 +195,12 @@ async function buy_handle(order){
         }
     );
 
-    return ({"success":"buy order placed but pending"});
+    return ({ case : 1002 });
 }
 
 async function sell_handle(order) {
 
-    if(order.ordertime == "delivery"){
+    if(order.ordertime == 0){
 
         const udata = await Users.findOne({
             "username" : order.username,
@@ -211,12 +208,13 @@ async function sell_handle(order) {
         // console.log(udata);
         const portfolioElement = udata.portfolio.find(item => item.stockname === order.stockname);
         console.log(portfolioElement);
+
         if(!portfolioElement){
-            return ({"success" : "You don't own this stock"});
+            return ({ case : 1003 });
         }
         
         if(portfolioElement.quantity < order.quantity){
-            return ({"success" : "insufficient quantity", "available" : portfolioElement.quantity});
+            return ({case : 1004, "available" : portfolioElement.quantity});
         }
 
         await Users.updateOne(
@@ -232,44 +230,30 @@ async function sell_handle(order) {
     else{
 
         await Users.updateOne(
-            { "username" : order.username, "portfolio.stockname" : order.stockname},
+            { "username" : order.username},
             {
                 $inc : {
                     'limitcount' : 1
                 }
             }
         );
+
         const odata = await op_logs.findOne({
             "username" : order.username, 
         });
+
         const udata = await Users.findOne({username: order.username });
         if(!odata){
-                var newentry = new op_logs({
-                    username : order.username,
-                    balance : udata.balance,
-                    log : [{
-                        stockname : order.stockname,
-                        quantity : order.quantity,
-                        ex_price : exprice,
-                        direction : order.direction
-                    }]
-                });
-
-                newentry.save(function(err, Person){
-                    if(err)
-                        console.log(err);
-                    else
-                        console.log('Success entry');
-                });
+            return { case : 1003 };
         }
 
         const logElement = odata.log.find(item => item.stockname === order.stockname);
         if(!logElement){
-            return send({"success" : "You don't own this stock"});
+            return { case : 1003 };
         }
         
         if(logElement.quantity < order.quantity){
-            return ({"success" : "insufficient quantity", "available" : logElement.quantity});
+            return ({ case : 1004, "available" : logElement.quantity});
         }
 
         await op_logs.updateOne(
@@ -304,7 +288,7 @@ async function sell_handle(order) {
         }
         }
     );
-    return ({"success" : "order placed but pending"});
+    return ({case : 1002 });
 }
 
 module.exports = {

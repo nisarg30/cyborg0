@@ -3,9 +3,12 @@ const op_logs = require('../models/open_trades');
 const td_logs = require('../models/trade_log');
 const fetchStockPrice = require('../utls/s_price');
 
+// 1000 = login
+// 1003 = do not own stock
+// 1004 = less quantity
 module.exports = async (req, res) => {
     if (!req.session.userId) {
-        return res.send({ Success: "login required." });
+        return res.send({ case: 1000 });
     }
 
     const stockName = req.body.stockname;
@@ -16,18 +19,18 @@ module.exports = async (req, res) => {
         // Fetch the current stock price
         const exPrice = parseFloat(await fetchStockPrice(stockName));
 
-        if (orderTime === "delivery") {
+        if (orderTime === 0) {
             // Handle delivery sell order
             const user = await Users.findOne({ username: req.session.userId });
 
             const stock = user.portfolio.find(item => item.stockname === stockName);
 
             if (!stock) {
-                return res.send({ success: "you don't own this stock" });
+                return res.send({ case: 1003 });
             }
 
             if (quantity > stock.quantity) {
-                return res.send({ success: "insufficient quantity.", available: stock.quantity });
+                return res.send({ case: 1004, available: stock.quantity });
             }
 
             stock.quantity -= quantity;
@@ -68,23 +71,23 @@ module.exports = async (req, res) => {
                 );
             }
 
-            return res.send("sell delivery executed!");
+            return res.status(200).send({ case : 1002 });
         } else {
             // Handle intraday sell order
             const opLog = await op_logs.findOne({ username: req.session.userId });
 
             if (!opLog) {
-                return res.send("you don't own this stock");
+                return res.status(200).send({ case : 1003});
             }
 
             const stock = opLog.log.find(item => item.stockname === stockName);
 
             if (!stock) {
-                return res.send({ success: "you don't own this stock" });
+                return res.send({ case : 1003 });
             }
 
             if (quantity > stock.quantity) {
-                return res.send({ success: "insufficient quantity.", available: stock.quantity });
+                return res.send({ case : 1004, available: stock.quantity });
             }
 
             stock.quantity -= quantity;
@@ -125,11 +128,11 @@ module.exports = async (req, res) => {
                 );
             }
 
-            return res.send("sell intraday executed!");
+            return res.status(200).send({ case : 1002 });
         }
     } catch (error) {
         console.error(error);
-        return res.status(500).send({ error: "An error occurred." });
+        return res.status(500).send({ error: 1005 });
     }
 };
 
