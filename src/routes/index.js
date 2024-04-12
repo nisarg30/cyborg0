@@ -33,7 +33,7 @@ const verifyToken = (req, res, next) => {
 
 const verifyTokenFirst = (req, res, next) => {
     const token = req.body.token;
-	console.log("verify token first");
+	console.log("verify token first : ", token );
 	
     if (!token) {
         return res.status(401).json({ message: 'No token provided' });
@@ -186,6 +186,7 @@ router.post('/limit', verifyTokenFirst ,async function(req, res, next) {
 	
 	const order = {
 		username : req.session.userId,
+		stockname : req.body.stockname,
 		exprice : req.body.exprice,
 		quantity : req.body.quantity,
 		ordertime : req.body.ordertime,
@@ -323,10 +324,10 @@ router.post('/positions', verifyTokenFirst, async (req, res) => {
             { $unwind: '$intraday' },
             { $match: { 'intraday.date': new Date().toLocaleDateString() } },
             { $project: { _id: 0, logos: '$intraday.logos' } }
-        ]);
+        ]).exec();
 
-		console.log(trade_lgt)
-		res.status(200).send({ ope : open_positions , close : trade_lgt });
+		console.log(open_positions)
+		res.status(200).send({ ope : open_positions , close : trade_lgt.length == 0 ? [] : trade_lgt[0].logos });
 
 	} catch (error) {
 		console.log(error);
@@ -335,15 +336,32 @@ router.post('/positions', verifyTokenFirst, async (req, res) => {
 
 router.post('/orderhistory', verifyTokenFirst,async function(req, res) {
 	try {
-
 		const dateToSearch = new Date().toLocaleDateString();
+		console.log(dateToSearch);
 		try {
-			const logosForDate = await fetchLogosByDate(dateToSearch);
-			if (logosForDate !== null) {
-				console.log(logosForDate);
-			} else {
-				console.log("No intraday data found for the date", dateToSearch);
-			}
+			const trade_lgt = await td_logs.aggregate([
+				{
+					$match: {
+						username: req.session.userId
+					}
+				},
+				{
+					$unwind: "$intraday"
+				},
+				{
+					$match: {
+						"intraday.date": dateToSearch
+					}
+				},
+				{
+					$project: {
+						_id: 0,
+						logos: "$intraday.logos"
+					}
+				}
+			]).exec();
+			// console.log("logos : ", result[0].logos);
+			res.status(200).send({ " success" : "true", "logos" : trade_lgt.length == 0 ? [] : trade_lgt[0].logos });
 		} catch (error) {
 			console.error("Error:", error);
 		}
@@ -352,5 +370,79 @@ router.post('/orderhistory', verifyTokenFirst,async function(req, res) {
 		res.status(500).send({ error : error });
 	}
 });
+
+router.post('/openorders', verifyTokenFirst, async function (req, res) {
+	try {
+		const response = await td_logs.findOne({ username : req.session.userId }, { _id:0, limit : 1});
+		console.log(response.limit);
+		res.status(200).send({" success" : "success" , "openOrders" : response.limit })
+	} catch (error) {
+		console.log(error);
+		res.status(500).send({ error : error });
+	}
+})
+
+router.post('/account', verifyTokenFirst, async function(req,res) {
+	try {
+		const tdata = await td_logs.findOne({ username : req.session.userId }, { 'delivery.stockname': 1, 'delivery.realised': 1, '_id': 0 });
+		console.log(tdata);
+		res.status(200).send({" success" : "success" , "delivery" : tdata.delivery.length > 0 ? tdata.delivery : [] })
+	} catch (error) {
+		res.status(500).send({" error" : error });
+	}
+})
+
+router.post('/deliveryfetch', verifyTokenFirst, async function(req,res) {
+	try {
+		const tdata = await td_logs.aggregate([
+            { $match: { username: req.session.userId } },
+            { $unwind: "$delivery" },
+            { $match: { "delivery.stockname": req.body.stockname } },
+            { $project: { dlog: "$delivery.dlog", _id: 0 } }
+        ]);
+		console.log(tdata);
+		res.status(200).send({"success" : "success" , "deliveryfetch" : tdata[0].dlog.length > 0 ? tdata[0].dlog : [] })
+	} catch (error) {
+		console.log(error);
+		res.status(500).send({"error" : error });
+	}
+})
+
+router.post('/intradayfetch', verifyTokenFirst, async function (req, res) {
+	try {
+		const dateToSearch = req.body.date;
+		console.log(dateToSearch);
+		try {
+			const trade_lgt = await td_logs.aggregate([
+				{
+					$match: {
+						username: req.session.userId
+					}
+				},
+				{
+					$unwind: "$intraday"
+				},
+				{
+					$match: {
+						"intraday.date": dateToSearch
+					}
+				},
+				{
+					$project: {
+						_id: 0,
+						logos: "$intraday.logos"
+					}
+				}
+			]).exec();
+			console.log("logos : ", result[0].logos);
+			res.status(200).send({ " success" : "true", "logos" : trade_lgt.length == 0 ? [] : trade_lgt[0].logos });
+		} catch (error) {
+			console.error("Error:", error);
+		}
+	} catch (error) {
+		console.log(error);
+		res.status(500).send({ error : error });
+	}
+})
 //export
 module.exports = router;

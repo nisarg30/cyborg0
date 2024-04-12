@@ -1,5 +1,4 @@
 const { SmartAPI, WebSocketV2 } = require('smartapi-javascript');
-const mongoose = require('mongoose');
 const spp = require('./src/models/stockprice.js');
 const auth = require('otplib');
 const tokent_to_stock = require('./x.json');
@@ -9,7 +8,7 @@ const { getIO } = require('./src/socket.js');
 
 async function aaaa(){
   let smart_api = new SmartAPI({
-    api_key: 'D5FRzqDP',
+    api_key: 'zpLGgKoq',
 });
   const secret = 'TYNM4D6BQVQL63C6G3CISPCUOI';
   const token = auth.authenticator.generate(secret);
@@ -30,7 +29,7 @@ module.exports = getConnection;
 function abc(array, data) {
   const web_socket = new WebSocketV2({
     jwttoken: data.jwtToken,
-    apikey: 'D5FRzqDP',
+    apikey: 'zpLGgKoq',
     clientcode: "G222234",
     feedtype: data.feedToken,
   });
@@ -46,31 +45,29 @@ function abc(array, data) {
 
     web_socket.fetchData(json_req);
     web_socket.on('tick', receiveTick);
+    var io = getIO();
 
     async function receiveTick(data) {
+      
       if (data.token !== undefined) {
-        const io = getIO();
         const tokenWithQuotes = data.token;
         const tokenWithoutQuotes = tokenWithQuotes.replace(/['"]+/g, '');
         const price = parseInt(data.last_traded_price, 10) / 100;
-        if(price == 0) {
-          console.log(tokent_to_stock[tokenWithoutQuotes], "abd");
-        }
 
           io.to(tokent_to_stock[tokenWithoutQuotes]).emit('update', {
             stock: tokent_to_stock[tokenWithoutQuotes],
             price: price
           });
 
-        await spp.updateOne(
-          { token: tokenWithoutQuotes },
-          [{
-            $set: {
-              previousprice: "$currentprice",
-              currentprice: price
-            }
-          }]
-        );
+          spp.updateOne(
+            { token: tokenWithoutQuotes },
+            [{
+                $set: {
+                    previousprice: "$currentprice",
+                    currentprice: price
+                }
+            }]
+          );
       }
     }
   });

@@ -183,6 +183,15 @@ async function buy_handle(order){
         direction : order.direction
     }
 
+    var uentry = {
+        time : timeString,
+        stockname : order.stockname,
+        quantity: order.quantity,
+        ex_price: order.exprice,
+        ordertime : order.ordertime,
+        direction : order.direction
+    }
+
     limit.findOneAndUpdate(
         { stockname: order.stockname },
         { $push: { log: entry } },
@@ -191,6 +200,17 @@ async function buy_handle(order){
                 console.error('Error updating log:', err);
             } else {
                 // Log successful update if needed
+            }
+        }
+    );
+
+    td_logs.findOneAndUpdate(
+        { username: order.username },
+        { $push: { limit: uentry } },
+        (err, result) => {
+            if (err) {
+                console.log(err);
+                return;
             }
         }
     );
@@ -277,6 +297,16 @@ async function sell_handle(order) {
         direction : order.direction
     }
 
+    var uentry = {
+        time : timeString,
+        stockname : order.stockname,
+        quantity: order.quantity,
+        ex_price: order.exprice,
+        ordertime : order.ordertime,
+        direction : order.direction
+    }
+
+
     limit.findOneAndUpdate(
         { stockname: order.stockname },
         { $push: { log: entry } },
@@ -286,6 +316,17 @@ async function sell_handle(order) {
             } else {
                 // Log successful update if needed
         }
+        }
+    );
+
+    td_logs.findOneAndUpdate(
+        { username: order.username },
+        { $push: { limit: uentry } },
+        (err, result) => {
+            if (err) {
+                console.log(err);
+                return;
+            }
         }
     );
     return ({case : 1002 });

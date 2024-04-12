@@ -132,6 +132,27 @@ module.exports = async function sellLimitPostExecution(order) {
                 { $pull: { log: { stockname: order.stockname, quantity: { $lte: 0 }, ex_price : { $gte : 0.1 } } } }
             );
         }
+
+        const criteria = {
+            time : order.time,
+            stockname : order.stockname,
+            ex_price : order.exprice,
+            quantity : order.quantity,
+            ordertime : order.ordertime,
+            direction : order.direction
+        }
+        
+        TradeLogModel.updateOne(
+            { username: order.username },
+            { $pull: { limit: criteria } },
+            (err, result) => {
+                if (err) {
+                    console.error('Error:', err);
+                    return;
+                }
+                console.log('Element pulled from the limit array:', result);
+            }
+        );
         // Return success message
         return { "success": "sell post limit exec" };
     } catch (error) {

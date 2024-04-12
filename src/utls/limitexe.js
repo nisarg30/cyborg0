@@ -33,6 +33,7 @@ module.exports = async function limit_execution(stockname){
     for(i in data){
         const order = {
             username : data[i].username,
+            time : data[i].time,
             stockname : stockname,
             exprice : data[i].ex_price,
             quantity : data[i].quantity,
@@ -40,7 +41,7 @@ module.exports = async function limit_execution(stockname){
             direction : data[i].direction
         }
         // console.log(order);
-        if(order.direction === "BUY"){
+        if(order.direction === 0){
             const x = await buy_post(order);
             console.log(x);
         }

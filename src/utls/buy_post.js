@@ -21,44 +21,45 @@ module.exports = async function executeBuyLimitOrder(order) {
                 }
             }
         );
-        if (order.ordertime === "delivery") {
+
+        if (order.ordertime === 0) {
             // Handle delivery order
 
             // Update user's portfolio
-        const pipeline = [
-            { $match: { username : order.username } },
-            { $unwind: '$portfolio' },
-            { $match: { 'portfolio.stockname':  order.stockname} },
-            { $replaceRoot: { newRoot: '$portfolio' } }
-        ];
-        
-        const portfolioElement = await UsersModel.aggregate(pipeline);
-        const incBuyprice = roundToTwo((((portfolioElement[0].buy_price*portfolioElement[0].quantity) + (order.quantity * order.exprice))/(order.quantity + portfolioElement[0].quantity)) - portfolioElement[0].buy_price);
-        const incQuantity = order.quantity ;
+            const pipeline = [
+                { $match: { username : order.username } },
+                { $unwind: '$portfolio' },
+                { $match: { 'portfolio.stockname':  order.stockname} },
+                { $replaceRoot: { newRoot: '$portfolio' } }
+            ];
+            
+            const portfolioElement = await UsersModel.aggregate(pipeline);
+            const incBuyprice = roundToTwo((((portfolioElement[0].buy_price*portfolioElement[0].quantity) + (order.quantity * order.exprice))/(order.quantity + portfolioElement[0].quantity)) - portfolioElement[0].buy_price);
+            const incQuantity = order.quantity ;
 
-        await UsersModel.updateOne(
-            { username : order.username, 'portfolio.stockname': order.stockname },
-            {
-            $inc: {
-                'portfolio.$.quantity': incQuantity,
-                'portfolio.$.buy_price': incBuyprice
-            }
-            },
-        );
+            await UsersModel.updateOne(
+                { username : order.username, 'portfolio.stockname': order.stockname },
+                {
+                    $inc: {
+                        'portfolio.$.quantity': incQuantity,
+                        'portfolio.$.buy_price': incBuyprice
+                    }
+                },
+            );
 
-        const tradeLogEntry = {
-            date : new Date().toLocaleDateString(),
-            ex_price : order.exprice,
-            direction : "BUY",
-            quantity : order.quantity
-        }
-        
-        await TradeLogModel.findOneAndUpdate(
-            { username: order.username, 'delivery.stockname': order.stockname },
-            {
-                $push: { 'delivery.$.dlog': tradeLogEntry }
+            const tradeLogEntry = {
+                date : new Date().toLocaleDateString(),
+                ex_price : order.exprice,
+                direction : "BUY",
+                quantity : order.quantity
             }
-        );
+            
+            await TradeLogModel.findOneAndUpdate(
+                { username: order.username, 'delivery.stockname': order.stockname },
+                {
+                    $push: { 'delivery.$.dlog': tradeLogEntry }
+                }
+            );
 
         } else {
             // Handle non-delivery order
@@ -132,6 +133,27 @@ module.exports = async function executeBuyLimitOrder(order) {
                 }
             );
         }
+
+        const criteria = {
+            time : order.time,
+            stockname : order.stockname,
+            ex_price : order.exprice,
+            quantity : order.quantity,
+            ordertime : order.ordertime,
+            direction : order.direction
+        }
+        
+        TradeLogModel.updateOne(
+            { username: order.username },
+            { $pull: { limit: criteria } },
+            (err, result) => {
+                if (err) {
+                    console.error('Error:', err);
+                    return;
+                }
+                console.log('Element pulled from the limit array:', result);
+            }
+        );
 
         return { "success": "Buy order post execution successful" };
 

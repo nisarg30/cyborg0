@@ -4,6 +4,15 @@ var Schema = mongoose.Schema;
 tradeSchema = new Schema({
 
 	username   : String,
+    limit : [{
+        _id : false,
+        time : String,
+        stockname : String,
+        quantity : Number,
+        direction : Number,
+        ex_price : Number,
+        ordertime : Number,
+    }],
     delivery : [{
         _id : false,
         stockname  : String,

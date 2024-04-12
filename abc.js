@@ -24,7 +24,7 @@ const getConnection = async () => {
       var array = db.map(obj => obj.token);
       array1 = db;
       var x = db.slice(577, 1000);
-      console.log(x);
+      // console.log(x);
       var bbb = array.slice(1000,);
       const rtg = await aaaa();
       abc(bbb, rtg);
@@ -52,38 +52,26 @@ function abc(array, data) {
 
     web_socket.fetchData(json_req);
     web_socket.on('tick', receiveTick);
-    var x = 0;
+    var io = getIO();
+    
     async function receiveTick(data) {
       if (data.token !== undefined) {
-        
-        const io = getIO();
-        const tokenWithQuotes = data.token;
+          const tokenWithQuotes = data.token;
         const tokenWithoutQuotes = tokenWithQuotes.replace(/['"]+/g, '');
-        
         const price = parseInt(data.last_traded_price, 10) / 100;
-        // console.log(tokent_to_stock[tokenWithoutQuotes],price);
-        if(price == 0) {
-          x++;
-          // console.log(tokent_to_stock[tokenWithoutQuotes], x);
-          // for(var i=0; i<1000; i++) {
-          //   // console.log(array1[i].stockname, tokent_to_stock[tokenWithoutQuotes]);
-          //   if(array1[i].stockname == tokent_to_stock[tokenWithoutQuotes]) {
-          //     console.log(i);
-          //   }
-          // }
-        }
+
           io.to(tokent_to_stock[tokenWithoutQuotes]).emit('update', {
             stock: tokent_to_stock[tokenWithoutQuotes],
             price: price
           });
 
-          await spp.updateOne(
+          spp.updateOne(
             { token: tokenWithoutQuotes },
             [{
-              $set: {
-                previousprice: "$currentprice",
-                currentprice: price
-              }
+                $set: {
+                    previousprice: "$currentprice",
+                    currentprice: price
+                }
             }]
           );
       }
