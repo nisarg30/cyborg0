@@ -45,7 +45,7 @@ module.exports = async function (req, res) {
             const amttoinc = roundToTwo(quantity*exPrice);
             console.log(amttoinc, req.session.userId);
 
-            await op_logs.updateOne(
+            op_logs.updateOne(
                 { username: req.session.userId },
                 { $inc: { balance: - amttoinc } }
             );
@@ -58,7 +58,7 @@ module.exports = async function (req, res) {
                     quantity: quantity
                 };
                 console.log(amttoinc, ":xyz");
-                const x = await Users.updateOne(
+                const x = Users.updateOne(
                     { username: req.session.userId },
                     {
                         $push: { portfolio: element },
@@ -72,7 +72,7 @@ module.exports = async function (req, res) {
                 existingStock.buy_price = (existingStock.buy_price * existingStock.quantity + exPrice * quantity) / (existingStock.quantity + quantity);
 				existingStock.quantity += quantity;
 
-                await Users.updateOne(
+                Users.updateOne(
                     { username: req.session.userId },
                     { $set: { balance: user.balance - (quantity * exPrice), portfolio: portfolio } }
                 );
@@ -106,7 +106,7 @@ module.exports = async function (req, res) {
                     });
                 }
 
-                await td_logs.updateOne(
+                td_logs.updateOne(
                     { username: req.session.userId },
                     { $set: { delivery: tradeLog.delivery } }
                 );
@@ -129,7 +129,7 @@ module.exports = async function (req, res) {
                 const stockLog = opLog.log.find(log => log.stockname === stockName);
 
                 // Update user's balance
-                await Users.updateOne(
+                Users.updateOne(
                     { username: req.session.userId },
                     { $set: { balance: opLog.balance - (quantity * exPrice) } }
                 );
@@ -143,7 +143,7 @@ module.exports = async function (req, res) {
                         direction: req.body.direction,
                     });
 
-                    await op_logs.updateOne(
+                    op_logs.updateOne(
                         { username: req.session.userId },
                         { $set: { 	balance: opLog.balance - (quantity * exPrice), 
 									log : opLog.log} }
@@ -153,7 +153,7 @@ module.exports = async function (req, res) {
                     stockLog.ex_price = (stockLog.ex_price * stockLog.quantity + exPrice * quantity) / (stockLog.quantity + quantity);
 					stockLog.quantity += quantity;
                     bprice = stockLog.ex_price;
-                    await op_logs.updateOne(
+                    op_logs.updateOne(
                         { username: req.session.userId },
                         { $set: { balance: opLog.balance - (quantity * exPrice), log: opLog.log } }
                     );
@@ -182,9 +182,9 @@ module.exports = async function (req, res) {
                     }]
                 });
 
-                await newEntry.save();
+                newEntry.save();
 
-                await Users.updateOne(
+                Users.updateOne(
                     { username: req.session.userId },
                     { $set: { balance: remainingBalance } }
                 );
@@ -225,12 +225,12 @@ module.exports = async function (req, res) {
                     }
                 }
 
-                await td_logs.updateOne(
+                td_logs.updateOne(
                     { username: req.session.userId },
                     { $set: { intraday: tdLog.intraday } }
                 );
             }
-
+            
             return res.send({case : 1002 });
         }
     } catch (error) {

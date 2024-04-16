@@ -413,7 +413,7 @@ router.post('/intradayfetch', verifyTokenFirst, async function (req, res) {
 		const dateToSearch = req.body.date;
 		console.log(dateToSearch);
 		try {
-			const trade_lgt = await td_logs.aggregate([
+			const result = await td_logs.aggregate([
 				{
 					$match: {
 						username: req.session.userId
@@ -434,8 +434,8 @@ router.post('/intradayfetch', verifyTokenFirst, async function (req, res) {
 					}
 				}
 			]).exec();
-			console.log("logos : ", result[0].logos);
-			res.status(200).send({ " success" : "true", "logos" : trade_lgt.length == 0 ? [] : trade_lgt[0].logos });
+			console.log(result);
+			res.status(200).send({ " success" : "true", "logos" : result.length == 0 ? [] : result[0].logos });
 		} catch (error) {
 			console.error("Error:", error);
 		}

@@ -28,7 +28,7 @@ mongoose.connect('mongodb+srv://nisargpatel0466:nn__4569@cluster0.lsqbqko.mongod
 }, (err) => {
   if (!err) {
     console.log('MongoDB Connection Succeeded.');
-    // abc();
+    abc();
     abd();
   } else {
     console.log('Error in DB connection : ' + err);

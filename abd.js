@@ -8,7 +8,7 @@ const { getIO } = require('./src/socket.js');
 
 async function aaaa(){
   let smart_api = new SmartAPI({
-    api_key: 'zpLGgKoq',
+    api_key: 'rRdsosXa',
 });
   const secret = 'TYNM4D6BQVQL63C6G3CISPCUOI';
   const token = auth.authenticator.generate(secret);
@@ -29,7 +29,7 @@ module.exports = getConnection;
 function abc(array, data) {
   const web_socket = new WebSocketV2({
     jwttoken: data.jwtToken,
-    apikey: 'zpLGgKoq',
+    apikey: 'rRdsosXa',
     clientcode: "G222234",
     feedtype: data.feedToken,
   });
@@ -47,25 +47,36 @@ function abc(array, data) {
     web_socket.on('tick', receiveTick);
     var io = getIO();
 
+    var x = 0;
     async function receiveTick(data) {
-      
       if (data.token !== undefined) {
         const tokenWithQuotes = data.token;
         const tokenWithoutQuotes = tokenWithQuotes.replace(/['"]+/g, '');
+        
         const price = parseInt(data.last_traded_price, 10) / 100;
-
+        // console.log(tokent_to_stock[tokenWithoutQuotes],price);
+        // if(price == 0) {
+        //   x++;
+        //   console.log(tokent_to_stock[tokenWithoutQuotes], x);
+        //   for(var i=0; i<1000; i++) {
+        //     // console.log(array1[i].stockname, tokent_to_stock[tokenWithoutQuotes]);
+        //     if(array[i].stockname == tokent_to_stock[tokenWithoutQuotes]) {
+        //       console.log(i);
+        //     }
+        //   }
+        // }
           io.to(tokent_to_stock[tokenWithoutQuotes]).emit('update', {
             stock: tokent_to_stock[tokenWithoutQuotes],
             price: price
           });
 
-          spp.updateOne(
+          await spp.updateOne(
             { token: tokenWithoutQuotes },
             [{
-                $set: {
-                    previousprice: "$currentprice",
-                    currentprice: price
-                }
+              $set: {
+                previousprice: "$currentprice",
+                currentprice: price
+              }
             }]
           );
       }

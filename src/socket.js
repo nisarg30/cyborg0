@@ -13,7 +13,9 @@ function initSocket(server) {
         console.log('A client connected');
 
         socket.on('joinrequest', (rooms) => {
-          console.log(rooms)
+          console.log(rooms);
+          if(!rooms) return;
+          
           rooms.forEach((room) => {
             socket.join(room.stockname);
           });

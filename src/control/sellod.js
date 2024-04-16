@@ -41,12 +41,12 @@ module.exports = async (req, res) => {
 
             const newBalance = user.balance + quantity * exPrice;
 
-            await Users.updateOne(
+            Users.updateOne(
                 { username: req.session.userId },
                 { $set: { balance: newBalance, portfolio: user.portfolio } }
             );
 
-            await op_logs.updateOne(
+            op_logs.updateOne(
                 { username: req.session.userId },
                 { $set: { balance: newBalance } }
             );
@@ -65,7 +65,7 @@ module.exports = async (req, res) => {
                     });
                 }
 
-                await td_logs.updateOne(
+                td_logs.updateOne(
                     { username: req.session.userId },
                     { $set: { delivery: tradeLog.delivery } }
                 );
@@ -98,17 +98,17 @@ module.exports = async (req, res) => {
 
             const newBalance = opLog.balance + quantity * exPrice;
 
-            await Users.updateOne(
+            Users.updateOne(
                 { username: req.session.userId },
                 { $set: { balance: newBalance } }
             );
 
-            await op_logs.updateOne(
+            op_logs.updateOne(
                 { username: req.session.userId },
                 { $set: { balance: newBalance, log: opLog.log } }
             );
 
-            const tdLog = await td_logs.findOne({ username: req.session.userId });
+            const tdLog = td_logs.findOne({ username: req.session.userId });
             if (tdLog) {
                 const stockLog = tdLog.intraday.find(log => log.date === new Date().toLocaleDateString());
 
@@ -122,7 +122,7 @@ module.exports = async (req, res) => {
                     }
                 }
 
-                await td_logs.updateOne(
+                td_logs.updateOne(
                     { username: req.session.userId },
                     { $set: { intraday: tdLog.intraday } }
                 );
