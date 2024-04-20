@@ -1,10 +1,7 @@
 const UsersModel = require('../models/user');
 const OpenTradesModel = require('../models/open_trades');
 const TradeLogModel = require('../models/trade_log');
-const fetchPrice = require('../utls/s_price');
-const fs = require('fs');
-const { json } = require('body-parser');
-const path = require('path');
+const { sendUserSpecificUpdate } = require('../socket.js');
 
 function roundToTwo(value) {
     const roundedValue = Math.round(value * 100) / 100;
@@ -12,7 +9,9 @@ function roundToTwo(value) {
 }
 
 module.exports = async function executeBuyLimitOrder(order) {
+    console.log(order);
     try {
+
         await UsersModel.updateOne(
             { username : order.username },
             {
@@ -22,7 +21,7 @@ module.exports = async function executeBuyLimitOrder(order) {
             }
         );
 
-        if (order.ordertime === 0) {
+        if (order.ordertime == 0) {
             // Handle delivery order
 
             // Update user's portfolio
@@ -34,10 +33,10 @@ module.exports = async function executeBuyLimitOrder(order) {
             ];
             
             const portfolioElement = await UsersModel.aggregate(pipeline);
-            const incBuyprice = roundToTwo((((portfolioElement[0].buy_price*portfolioElement[0].quantity) + (order.quantity * order.exprice))/(order.quantity + portfolioElement[0].quantity)) - portfolioElement[0].buy_price);
+            const incBuyprice = ((((portfolioElement[0].buy_price*portfolioElement[0].quantity) + (order.quantity * order.exprice))/(order.quantity + portfolioElement[0].quantity)) - portfolioElement[0].buy_price).toFixed(2);
             const incQuantity = order.quantity ;
 
-            await UsersModel.updateOne(
+            UsersModel.updateOne(
                 { username : order.username, 'portfolio.stockname': order.stockname },
                 {
                     $inc: {
@@ -45,19 +44,25 @@ module.exports = async function executeBuyLimitOrder(order) {
                         'portfolio.$.buy_price': incBuyprice
                     }
                 },
+                (err) => {
+                    if(err) console.log(err);
+                }
             );
 
             const tradeLogEntry = {
                 date : new Date().toLocaleDateString(),
                 ex_price : order.exprice,
-                direction : "BUY",
+                direction : 0,
                 quantity : order.quantity
             }
             
-            await TradeLogModel.findOneAndUpdate(
+            TradeLogModel.findOneAndUpdate(
                 { username: order.username, 'delivery.stockname': order.stockname },
                 {
                     $push: { 'delivery.$.dlog': tradeLogEntry }
+                },
+                (err) => {
+                    if(err) console.log(err);
                 }
             );
 
@@ -72,10 +77,13 @@ module.exports = async function executeBuyLimitOrder(order) {
             ];
             
             var logElement = await OpenTradesModel.aggregate(pipeline);
+            console.log(logElement);
             logElement = logElement[0];
-            const incBuyprice = roundToTwo((((logElement.ex_price*logElement.quantity) + (order.quantity * order.exprice))/(order.quantity + logElement.quantity)) - logElement.ex_price);
+            const incBuyprice = ((((logElement.ex_price*logElement.quantity) + (order.quantity * order.exprice))/(order.quantity + logElement.quantity)) - logElement.ex_price).toFixed(2);
+            console.log(incBuyprice, 'buy post inc price');
             const incQuantity = order.quantity ;
-            await OpenTradesModel.updateOne(
+
+            OpenTradesModel.updateOne(
                 { username : order.username, 'log.stockname': order.stockname },
                 {
                 $inc: {
@@ -83,6 +91,9 @@ module.exports = async function executeBuyLimitOrder(order) {
                     'log.$.ex_price': incBuyprice
                 }
                 },
+                (err) => {
+                    if(err) console.log(err);
+                }
             );
             // Update intraday trade log
                 // console.log("xx");
@@ -116,9 +127,9 @@ module.exports = async function executeBuyLimitOrder(order) {
             ]);
 
             const intradayEntry = x[0];
-            const incIntratradebuyprice = roundToTwo((intradayEntry.buy_price * intradayEntry.quantity) + (order.quantity*order.exprice)/(order.quantity + intradayEntry.quantity) - intradayEntry.buy_price);
+            const incIntratradebuyprice = roundToTwo((((intradayEntry.buy_price * intradayEntry.quantity) + (order.quantity*order.exprice))/(order.quantity + intradayEntry.quantity)) - intradayEntry.buy_price);
             
-            const result = await TradeLogModel.updateOne(
+            TradeLogModel.updateOne(
                 { "username": order.username, 'intraday.date': todayDate, 'intraday.logos.stockname': order.stockname },
                 {
                     $inc: {
@@ -130,6 +141,9 @@ module.exports = async function executeBuyLimitOrder(order) {
                         { 'i.date': todayDate },
                         { 'j.stockname': order.stockname },
                     ],
+                },
+                (err) => {
+                    if(err) console.log(err);
                 }
             );
         }
@@ -155,10 +169,12 @@ module.exports = async function executeBuyLimitOrder(order) {
             }
         );
 
-        return { "success": "Buy order post execution successful" };
+        sendUserSpecificUpdate(order.username , criteria)
 
     } catch (error) {
         console.error("Error:", error.message);
         return { "error": "An error occurred" };
     }
 }
+
+

@@ -6,6 +6,7 @@ const moment = require('moment-timezone');
 
 async function buy_handle(order){
 
+    console.log(order, "pre process buy");
     const exprice = order.exprice;
     const udata = await Users.findOne({username: order.username });
     if(udata){
@@ -29,6 +30,7 @@ async function buy_handle(order){
     );
 
     if(order.ordertime === 0){
+        console.log('delivery order handle buy');
         const pipeline = [
             { $match: { username : order.username } },
             { $unwind: '$portfolio' },
@@ -81,8 +83,9 @@ async function buy_handle(order){
                 )
             }
     }
-    else if(order.ordertime === 1){
+    else {
         //new op_logs entry
+        console.log("intraday order handle");
         const odata = await op_logs.findOne({username : order.username});
         if(!odata) {
             const newLogEntry = new op_logs({
@@ -90,7 +93,7 @@ async function buy_handle(order){
                 balance: udata.balance,
                 log: []
             });
-            const savedLogEntry = await newLogEntry.save();
+            await newLogEntry.save();
         }
 
         //op_logs presetting
@@ -178,7 +181,7 @@ async function buy_handle(order){
         time : timeString,
         username: order.username,
         quantity: order.quantity,
-        ex_price: order.ex_price,
+        exprice: order.exprice,
         ordertime : order.ordertime,
         direction : order.direction
     }
@@ -215,19 +218,20 @@ async function buy_handle(order){
         }
     );
 
-    return ({ case : 1002 });
+    return ({ case : 1002 , entry : uentry });
 }
 
 async function sell_handle(order) {
 
+    console.log(order), "pre process sell";
     if(order.ordertime == 0){
 
+        console.log('delivery orde rhandle sell');
         const udata = await Users.findOne({
             "username" : order.username,
         });
         // console.log(udata);
         const portfolioElement = udata.portfolio.find(item => item.stockname === order.stockname);
-        console.log(portfolioElement);
 
         if(!portfolioElement){
             return ({ case : 1003 });
@@ -248,6 +252,7 @@ async function sell_handle(order) {
         );
     }
     else{
+        console.log('intraday order handle sell')
 
         await Users.updateOne(
             { "username" : order.username},
@@ -292,7 +297,7 @@ async function sell_handle(order) {
         time : timeString,
         username: order.username,
         quantity: order.quantity,
-        ex_price: order.exprice,
+        exprice: order.exprice,
         ordertime : order.ordertime,
         direction : order.direction
     }
@@ -329,7 +334,7 @@ async function sell_handle(order) {
             }
         }
     );
-    return ({case : 1002 });
+    return ({ case : 1002 , entry : uentry });
 }
 
 module.exports = {

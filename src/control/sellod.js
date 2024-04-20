@@ -43,12 +43,24 @@ module.exports = async (req, res) => {
 
             Users.updateOne(
                 { username: req.session.userId },
-                { $set: { balance: newBalance, portfolio: user.portfolio } }
+                { $set: { balance: newBalance, portfolio: user.portfolio } },
+                (err) => {
+                    if (err) {
+                        console.error(err);
+                        return res.status(500).send({ error: 1005 });
+                    }
+                }
             );
 
             op_logs.updateOne(
                 { username: req.session.userId },
-                { $set: { balance: newBalance } }
+                { $set: { balance: newBalance } },
+                (err) => {
+                    if (err) {
+                        console.error(err);
+                        return res.status(500).send({ error: 1005 });
+                    }
+                }
             );
 
             const tradeLog = await td_logs.findOne({ username: req.session.userId });
@@ -60,18 +72,24 @@ module.exports = async (req, res) => {
                     stockLog.dlog.push({
                         date: new Date().toLocaleDateString(),
                         ex_price: exPrice,
-                        direction: "SELL",
+                        direction: 1,
                         quantity: quantity
                     });
                 }
 
                 td_logs.updateOne(
                     { username: req.session.userId },
-                    { $set: { delivery: tradeLog.delivery } }
+                    { $set: { delivery: tradeLog.delivery } },
+                    (err) => {
+                        if (err) {
+                            console.error(err);
+                            return res.status(500).send({ error: 1005 });
+                        }
+                    }
                 );
             }
 
-            return res.status(200).send({ case : 1002 });
+            return res.status(200).send({ case : 1002, price : exPrice });
         } else {
             // Handle intraday sell order
             const opLog = await op_logs.findOne({ username: req.session.userId });
@@ -81,7 +99,7 @@ module.exports = async (req, res) => {
             }
 
             const stock = opLog.log.find(item => item.stockname === stockName);
-
+            
             if (!stock) {
                 return res.send({ case : 1003 });
             }
@@ -100,15 +118,27 @@ module.exports = async (req, res) => {
 
             Users.updateOne(
                 { username: req.session.userId },
-                { $set: { balance: newBalance } }
+                { $set: { balance: newBalance } },
+                (err) => {
+                    if (err) {
+                        console.error(err);
+                        return res.status(500).send({ error: 1005 });
+                    }
+                }
             );
 
             op_logs.updateOne(
                 { username: req.session.userId },
-                { $set: { balance: newBalance, log: opLog.log } }
+                { $set: { balance: newBalance, log: opLog.log } },
+                (err) => {
+                    if (err) {
+                        console.error(err);
+                        return res.status(500).send({ error: 1005 });
+                    }
+                }
             );
 
-            const tdLog = td_logs.findOne({ username: req.session.userId });
+            const tdLog = await td_logs.findOne({ username: req.session.userId });
             if (tdLog) {
                 const stockLog = tdLog.intraday.find(log => log.date === new Date().toLocaleDateString());
 
@@ -124,11 +154,18 @@ module.exports = async (req, res) => {
 
                 td_logs.updateOne(
                     { username: req.session.userId },
-                    { $set: { intraday: tdLog.intraday } }
+                    { $set: { intraday: tdLog.intraday } },
+                    (err) => {
+                        if (err) {
+                            console.error(err);
+                            return res.status(500).send({ error: 1005 });
+                        }
+                    }
                 );
             }
 
-            return res.status(200).send({ case : 1002 });
+            console.log(exPrice);
+            return res.status(200).send({ case : 1002 , price : exPrice });
         }
     } catch (error) {
         console.error(error);

@@ -47,7 +47,13 @@ module.exports = async function (req, res) {
 
             op_logs.updateOne(
                 { username: req.session.userId },
-                { $inc: { balance: - amttoinc } }
+                { $inc: { balance: -amttoinc } },
+                (err) => {
+                    if (err) {
+                        console.error(err);
+                        return res.status(500).send({ error: 1005 });
+                    }
+                }
             );
 
             if (!existingStock) {
@@ -57,16 +63,21 @@ module.exports = async function (req, res) {
                     buy_price: exPrice,
                     quantity: quantity
                 };
-                console.log(amttoinc, ":xyz");
+
                 const x = Users.updateOne(
                     { username: req.session.userId },
                     {
                         $push: { portfolio: element },
-                        $inc: { balance: amttoinc }
+                        $inc: { balance: -amttoinc }
+                    },
+                    (err) => {
+                        if (err) {
+                            console.error(err);
+                            return res.status(500).send({ error: 1005 });
+                        }
                     }
                 );
                 
-                console.log(x);
             } else {
                 // Update existing stock's details in the portfolio
                 existingStock.buy_price = (existingStock.buy_price * existingStock.quantity + exPrice * quantity) / (existingStock.quantity + quantity);
@@ -74,7 +85,13 @@ module.exports = async function (req, res) {
 
                 Users.updateOne(
                     { username: req.session.userId },
-                    { $set: { balance: user.balance - (quantity * exPrice), portfolio: portfolio } }
+                    { $set: { balance: user.balance - (quantity * exPrice), portfolio: portfolio } },
+                    (err) => {
+                        if (err) {
+                            console.error(err);
+                            return res.status(500).send({ error: 1005 });
+                        }
+                    }
                 );
             }
 
@@ -92,7 +109,7 @@ module.exports = async function (req, res) {
                         dlog: [{
                             date: new Date().toLocaleDateString(),
                             ex_price: exPrice,
-                            direction: "BUY",
+                            direction: 1,
                             quantity: quantity
                         }]
                     });
@@ -101,18 +118,24 @@ module.exports = async function (req, res) {
                     stockLog.dlog.push({
                         date: new Date().toLocaleDateString(),
                         ex_price: exPrice,
-                        direction: "BUY",
+                        direction: 1,
                         quantity: quantity
                     });
                 }
 
                 td_logs.updateOne(
                     { username: req.session.userId },
-                    { $set: { delivery: tradeLog.delivery } }
+                    { $set: { delivery: tradeLog.delivery } },
+                    (err) => {
+                        if (err) {
+                            console.error(err);
+                            return res.status(500).send({ error: 1005 });
+                        }
+                    }
                 );
             }
 
-            return res.status(200).send({ case: 1002 });
+            return res.status(200).send({ case: 1002, price : exPrice });
         } 
 		else {
             // Handle intraday order
@@ -131,7 +154,13 @@ module.exports = async function (req, res) {
                 // Update user's balance
                 Users.updateOne(
                     { username: req.session.userId },
-                    { $set: { balance: opLog.balance - (quantity * exPrice) } }
+                    { $set: { balance: opLog.balance - (quantity * exPrice) } },
+                    (err) => {
+                        if (err) {
+                            console.error(err);
+                            return res.status(500).send({ error: 1005 });
+                        }
+                    }
                 );
 
                 if (!stockLog) {
@@ -146,7 +175,14 @@ module.exports = async function (req, res) {
                     op_logs.updateOne(
                         { username: req.session.userId },
                         { $set: { 	balance: opLog.balance - (quantity * exPrice), 
-									log : opLog.log} }
+									log : opLog.log
+                                } },
+                                (err) => {
+                                    if (err) {
+                                        console.error(err);
+                                        return res.status(500).send({ error: 1005 });
+                                    }
+                                }
                     );
                 } else {
                     // Update existing stock entry in operation logs
@@ -155,7 +191,13 @@ module.exports = async function (req, res) {
                     bprice = stockLog.ex_price;
                     op_logs.updateOne(
                         { username: req.session.userId },
-                        { $set: { balance: opLog.balance - (quantity * exPrice), log: opLog.log } }
+                        { $set: { balance: opLog.balance - (quantity * exPrice), log: opLog.log } },
+                        (err) => {
+                            if (err) {
+                                console.error(err);
+                                return res.status(500).send({ error: 1005 });
+                            }
+                        }
                     );
                 }
             } else {
@@ -186,7 +228,13 @@ module.exports = async function (req, res) {
 
                 Users.updateOne(
                     { username: req.session.userId },
-                    { $set: { balance: remainingBalance } }
+                    { $set: { balance: remainingBalance } },
+                    (err) => {
+                        if (err) {
+                            console.error(err);
+                            return res.status(500).send({ error: 1005 });
+                        }
+                    }
                 );
             }
 
@@ -227,11 +275,17 @@ module.exports = async function (req, res) {
 
                 td_logs.updateOne(
                     { username: req.session.userId },
-                    { $set: { intraday: tdLog.intraday } }
+                    { $set: { intraday: tdLog.intraday } },
+                    (err) => {
+                        if (err) {
+                            console.error(err);
+                            return res.status(500).send({ error: 1005 });
+                        }
+                    }
                 );
             }
             
-            return res.send({case : 1002 });
+            return res.send({ case : 1002, price : exPrice });
         }
     } catch (error) {
         console.error(error);

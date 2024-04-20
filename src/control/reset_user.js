@@ -3,10 +3,13 @@ const op_logs = require('../models/open_trades');
 const td_logs = require('..//models/trade_log');
 
 module.exports = async function reset_user(req, res){
+
+    console.log('reesetuser');
     try{
-        const userdata = await Users.findone( { username : req.session.userId} );
+        const userdata = await Users.findOne( { username : req.session.userId} );
+        console.log(userdata)
         if(userdata.limitcount > 0){
-            return res.send({success : "you have limit trades pending either close them or wait for them to get executed"});
+            return res.send({ success : 1003 });
         }
 
         await Users.updateOne( 
@@ -15,7 +18,8 @@ module.exports = async function reset_user(req, res){
                 $set : {
                     limitcount : 0,
                     balance : 1000000,
-                    portfolio : []
+                    portfolio : [],
+                    watchlists : []
                 }
             }
         );
@@ -26,15 +30,16 @@ module.exports = async function reset_user(req, res){
                 $set : {
                     delivery : [],
                     intraday : [],
+                    limit : [],
                 }
             }
         );
 
         await op_logs.deleteOne( { username : req.session.userId } );
-        return res.send({success : "account resetted"});
+        return res.send({success : 1001 });
     }
     catch (err){
         console.log(err);
-        return res.send({success : "error occured"});
+        return res.send({success : 1002 });
     }
 }

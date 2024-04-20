@@ -1,85 +1,136 @@
 const { SmartAPI, WebSocketV2 } = require('smartapi-javascript');
+const mongoose = require('mongoose');
 const spp = require('./src/models/stockprice.js');
 const auth = require('otplib');
 const tokent_to_stock = require('./x.json');
-const limit_execution = require('./src/utls/limitexe.js');
-
+const fs = require('fs');
 const { getIO } = require('./src/socket.js');
+const limit_execution = require('./src/utls/limitexe.js')
 
-async function aaaa(){
-  let smart_api = new SmartAPI({
-    api_key: 'rRdsosXa',
-});
-  const secret = 'TYNM4D6BQVQL63C6G3CISPCUOI';
-  const token = auth.authenticator.generate(secret);
-  const xyz = await smart_api.generateSession('G222234', '2580', token);
-  return xyz.data;
+var io;
+// Common WebSocket configuration
+const websocketConfig = {
+    apikey: 'TUlICC4Y',
+    clientcode: "G222234",
+};
+
+async function createSession() {
+    const smart_api = new SmartAPI({ api_key: 'TUlICC4Y' });
+    const secret = 'TYNM4D6BQVQL63C6G3CISPCUOI';
+    const token = auth.authenticator.generate(secret);
+    const session = await smart_api.generateSession('G222234', '2580', token);
+    return session.data;
 }
 
-const getConnection = async () => {
-      db = await spp.find({});
-      var array = db.map(obj => obj.token);
-      var bbb = array.slice(0,1000);
-      const rtg = await aaaa();
-      abc(bbb, rtg);
-  };
-  
-module.exports = getConnection;
+async function setupWebSocket(array, data) {
+    const web_socket = new WebSocketV2({
+        jwttoken: data.jwtToken,
+        ...websocketConfig,
+        feedtype: data.feedToken,
+    });
 
-function abc(array, data) {
-  const web_socket = new WebSocketV2({
-    jwttoken: data.jwtToken,
-    apikey: 'rRdsosXa',
-    clientcode: "G222234",
-    feedtype: data.feedToken,
-  });
+    try {
+        io = getIO();
+        await web_socket.connect();
+        let json_req = {
+            "correlationID": "abcde12345",
+            "action": 1,
+            "mode": 2,
+            "exchangeType": 1,
+            "tokens": array
+        };
+        web_socket.fetchData(json_req);
+        web_socket.on('tick', receiveTick);
+    } catch (error) {
+        console.error('WebSocket connection error:', error);
+    }
+}
 
-  web_socket.connect().then((res) => {
-    let json_req = {
-      "correlationID": "abcde12345",
-      "action": 1,
-      "mode": 1,
-      "exchangeType": 1,
-      "tokens": array
-    };
+const BULK_UPDATE_SIZE = 100; // Number of updates before a bulk operation is triggered
+let bulkOperations = [];
+let bulkTimer = null;
 
-    web_socket.fetchData(json_req);
-    web_socket.on('tick', receiveTick);
-    var io = getIO();
+function flushBulkOperations() {
+    if (bulkOperations.length > 0) {
+        spp.bulkWrite(bulkOperations).then().catch(err => {
+            console.error('Bulk update failed:', err);
+        });
+        // Clear the current bulk operations array
+        bulkOperations = [];
+    }
+}
 
-    var x = 0;
-    async function receiveTick(data) {
-      if (data.token !== undefined) {
+async function receiveTick(data) {
+//   console.log(data);
+    if (data.token !== undefined) {
+        console.log(data);
         const tokenWithQuotes = data.token;
         const tokenWithoutQuotes = tokenWithQuotes.replace(/['"]+/g, '');
-        
         const price = parseInt(data.last_traded_price, 10) / 100;
-        // console.log(tokent_to_stock[tokenWithoutQuotes],price);
-        // if(price == 0) {
-        //   x++;
-        //   console.log(tokent_to_stock[tokenWithoutQuotes], x);
-        //   for(var i=0; i<1000; i++) {
-        //     // console.log(array1[i].stockname, tokent_to_stock[tokenWithoutQuotes]);
-        //     if(array[i].stockname == tokent_to_stock[tokenWithoutQuotes]) {
-        //       console.log(i);
-        //     }
-        //   }
-        // }
-          io.to(tokent_to_stock[tokenWithoutQuotes]).emit('update', {
-            stock: tokent_to_stock[tokenWithoutQuotes],
-            price: price
-          });
+        const close = parseInt(data.close_price, 10) / 100;
+        const stockname = tokent_to_stock[tokenWithoutQuotes]        // Emit socket message
 
-          await spp.updateOne(
-            { token: tokenWithoutQuotes },
-            [{
-              $set: {
-                previousprice: "$currentprice",
-                currentprice: price
-              }
-            }]
-          );
-      }
+        io.of('/auth').to(tokent_to_stock[tokenWithoutQuotes]).emit('update', {
+            stock: stockname,
+            price: price,
+            open : close
+        });
+        
+        io.of('/general').to(tokent_to_stock[tokenWithoutQuotes]).emit('update', {
+            stock: stockname,
+            price: price,
+            open : close
+        });
+
+        console.log(tokent_to_stock[tokenWithoutQuotes], price);
+        limit_execution(tokent_to_stock[tokenWithoutQuotes]).then(() => {
+        });
+
+        // Prepare update operation for bulk writing
+        bulkOperations.push({
+            updateOne: {
+                filter: { token: tokenWithoutQuotes },
+                update: [{
+                    $set: {
+                        previousprice: "$currentprice",  // This now correctly references the field
+                        currentprice: price,
+                        close : close
+                    }
+                }]
+            }
+        });
+      
+        // Check if it's time to flush the bulk operations
+        if (bulkOperations.length >= BULK_UPDATE_SIZE) {
+            flushBulkOperations();
+        }
+
+        // Optionally set a timer to flush operations at least every few seconds
+        if (!bulkTimer) {
+            bulkTimer = setTimeout(() => {
+                flushBulkOperations();
+                bulkTimer = null;
+            }, 1000);  // Adjust time to balance between performance and real-time requirement
+        }
     }
-  });
 }
+
+// Wrapping abd and abc function to reduce duplication
+async function handleTokens(tokens) {
+  const sessionData = await createSession();
+  const firstBatch = tokens.slice(0, 1000);
+  const secondBatch = tokens.slice(1000,);
+//   setupWebSocket(firstBatch, sessionData);
+//   setupWebSocket(secondBatch, sessionData);
+    setupWebSocket(['26000','26009','2885'],sessionData)
+}
+
+
+async function getConnection() {
+    const tokensFilename = 'tokens.json';
+    const rawData = fs.readFileSync(tokensFilename);
+    var tokens = JSON.parse(rawData);
+    await handleTokens(tokens);
+}
+
+module.exports = getConnection;

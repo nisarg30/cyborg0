@@ -7,9 +7,9 @@ module.exports = async function delete_user(req, res) {
         await Users.deleteOne({ username: req.session.userId });
         await op_logs.findOneAndDelete({ username: req.session.userId });
         await td_logs.deleteOne({ username: req.session.userId });
-        return res.send({ success: "account deleted" });
+        return res.status(200).send({ success: 1001 });
     } catch (err) {
         console.log(err);
-        return res.send({ success: "error" });
+        return res.send({ success: 1002});
     }
 }

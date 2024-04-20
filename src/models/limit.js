@@ -9,9 +9,9 @@ limitSchema = new Schema({
         time : String,
         username   : String,
         quantity   : Number,
-        ex_price   : Number,
-        ordertime  : String,
-        direction  : String
+        exprice   : Number,
+        ordertime  : Number,
+        direction  : Number
     }]
 },{ collection: 'limit'});
 

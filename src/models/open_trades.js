@@ -10,7 +10,7 @@ openSchema = new Schema({
         stockname  : String,
         quantity   : Number,
         ex_price   : Number,
-        direction  : String,
+        direction  : Number,
     }]
 },{ collection: 'open_log'});
 

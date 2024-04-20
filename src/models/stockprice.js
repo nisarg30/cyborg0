@@ -6,6 +6,7 @@ const priceSchema = new Schema({
 	stockname : String,
     currentprice : Number,
     previousprice : Number,
+    close : Number,
     token : String,
 },{ collection: 'stockprice'});
 

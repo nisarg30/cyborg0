@@ -21,7 +21,7 @@ tradeSchema = new Schema({
             _id : false,
             date : String,
             ex_price : Number,
-            direction : String,
+            direction : Number,
             quantity : Number,
         }]
     }],

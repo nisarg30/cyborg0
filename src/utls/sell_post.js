@@ -4,6 +4,7 @@ const OpenTradesModel = require('../models/open_trades');
 const TradeLogModel = require('../models/trade_log');
 const path = require('path');
 const fs = require('fs');
+const { sendUserSpecificUpdate } = require('../socket.js')
 
 function roundToTwo(value) {
     const roundedValue = Math.round(value * 100) / 100;
@@ -13,15 +14,19 @@ function roundToTwo(value) {
 module.exports = async function sellLimitPostExecution(order) {
 
     try {
-        await UsersModel.updateOne(
+        UserModel.updateOne(
             { username : order.username },
             {
                 $inc : {
                     limitcount : -1,
                 }
+            },
+            (err) => {
+                if(err) console.log(err);
             }
         );
-        if (order.ordertime === "delivery") {
+
+        if (order.ordertime == "0") {
             // For delivery orders
             const user = await UserModel.findOne({ username: order.username });
             if (!user) {
@@ -30,14 +35,20 @@ module.exports = async function sellLimitPostExecution(order) {
 
             const orderTotal = roundToTwo(order.exprice * order.quantity);
             // Update user's balance and open trades balance
-            await UserModel.findOneAndUpdate(
+            UserModel.updateOne(
                 { username: order.username },
-                { $inc: { balance: orderTotal } }
+                { $inc: { balance: orderTotal } },
+                (err) => {
+                    if(err) console.log(err);
+                }
             );
 
-            await OpenTradesModel.findOneAndUpdate(
+            OpenTradesModel.updateOne(
                 { username: order.username },
-                { $inc: { balance: orderTotal } }
+                { $inc: { balance: orderTotal } },
+                (err) => {
+                    if(err) console.log(err);
+                }
             );
 
             // Prepare trade log entry for the user
@@ -45,7 +56,7 @@ module.exports = async function sellLimitPostExecution(order) {
                 date: new Date().toLocaleDateString(),
                 ex_price: order.exprice,
                 quantity: order.quantity,
-                direction: "SELL"
+                direction: 1,
             };
             const existingStock = user.portfolio.find(stock => stock.stockname === order.stockname);
 
@@ -54,18 +65,24 @@ module.exports = async function sellLimitPostExecution(order) {
             }
             const incAmount = roundToTwo((order.exprice - existingStock.buy_price) * order.quantity);
             // Update trade log with the sell details and realized profit
-            const updatedTradeLog = await TradeLogModel.updateOne(
+            TradeLogModel.updateOne(
                 { username: order.username, 'delivery.stockname': order.stockname },
                 {
                     $push: { 'delivery.$.dlog': tradeLogEntry },
                     $inc: { 'delivery.$.realised': incAmount }
+                },
+                (err) => {
+                    if(err) console.log(err);
                 }
             );
 
             // Remove stocks with non-positive quantities from user's portfolio
-            await UserModel.updateOne(
+            UserModel.updateOne(
                 { username: order.username },
-                { $pull: { portfolio: { stockname: order.stockname, quantity: { $lte: 0 }, buy_price : { $gte : 0.1 } } } }
+                { $pull: { portfolio: { stockname: order.stockname, quantity: { $lte: 0 }, buy_price : { $gte : 0.1 } } } },
+                (err) => {
+                    if(err) console.log(err);
+                }
             );
 
         } else {
@@ -78,14 +95,20 @@ module.exports = async function sellLimitPostExecution(order) {
             
             // Update user's balance and open trades balance
             const orderinc = roundToTwo(order.exprice * order.quantity)
-            await UserModel.findOneAndUpdate(
+            UserModel.updateOne(
                 { username: order.username },
-                { $inc: { balance: orderinc } }
+                { $inc: { balance: orderinc } },
+                (err) => {
+                    if(err) console.log(err);
+                }
             );
 
-            await OpenTradesModel.findOneAndUpdate(
+            OpenTradesModel.findOneAndUpdate(
                 { username: order.username },
-                { $inc: { balance: orderinc } }
+                { $inc: { balance: orderinc } },
+                (err) => {
+                    if(err) console.log(err);
+                }
             );
 
             // Get today's date and relevant trade log entry
@@ -105,7 +128,7 @@ module.exports = async function sellLimitPostExecution(order) {
             const incRealised = roundToTwo((logosEntry.sell_price - logosEntry.buy_price + incSellprice) * (order.quantity));
 
             // Update the intraday trade log with the modified entry
-            const result = await TradeLogModel.updateOne(
+            TradeLogModel.updateOne(
                 { "username": order.username, 'intraday.date': today, 'intraday.logos.stockname': order.stockname },
                 {
                     $inc: {
@@ -119,17 +142,19 @@ module.exports = async function sellLimitPostExecution(order) {
                         { 'i.date': today },
                         { 'j.stockname': order.stockname },
                     ],
+                },
+                (err) => {
+                    if(err) console.log(err);
                 }
             );
 
-            if (!result) {
-                throw new Error("Trade log not updated");
-            }
-
             // Remove stocks with non-positive quantities from open trades log
-            await OpenTradesModel.findOneAndUpdate(
+            OpenTradesModel.findOneAndUpdate(
                 { username: order.username },
-                { $pull: { log: { stockname: order.stockname, quantity: { $lte: 0 }, ex_price : { $gte : 0.1 } } } }
+                { $pull: { log: { stockname: order.stockname, quantity: { $lte: 0 }, ex_price : { $gte : 0.1 } } } },
+                (err) => {
+                    if(err) console.log(err);
+                }
             );
         }
 
@@ -153,8 +178,9 @@ module.exports = async function sellLimitPostExecution(order) {
                 console.log('Element pulled from the limit array:', result);
             }
         );
-        // Return success message
-        return { "success": "sell post limit exec" };
+
+        sendUserSpecificUpdate(order.username , criteria);
+        
     } catch (error) {
         console.error("Error in sellLimitPostExecution:", error);
         return { "error": error.message };

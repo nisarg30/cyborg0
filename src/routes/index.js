@@ -172,9 +172,9 @@ router.post('/maintainance', maintain)
 
 router.post('/limitmaintainance', limitmaintain)
 
-router.post('/deleteuser', verifyToken ,deleteuser)
+router.post('/deleteuser', verifyTokenFirst ,deleteuser)
 
-router.post('/resetuser', verifyToken ,reset_user)
+router.post('/resetuser', verifyTokenFirst ,reset_user)
 
 //limit order handeling
 router.post('/limit', verifyTokenFirst ,async function(req, res, next) {
@@ -310,7 +310,7 @@ router.post('/portfolio', verifyTokenFirst,async (req, res) => {
 		const data = await Users.findOne({ username : req.session.userId });
 		const portfolio = data.portfolio;
         console.log(data);
-		res.status(200).send({success : 'success', portfolio});
+		res.status(200).send({success : 'success', portfolio, balance : data.balance});
 	} catch (error) {
 		console.log(error);
 	}
