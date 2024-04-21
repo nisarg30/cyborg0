@@ -118,11 +118,13 @@ io.on('connection', (socket) => {
     console.log(chart.periods[0]);
     io.emit('dataUpdate', chart.periods[0]);
   });
+
+  socket.on('disconnect', () => {
+    client.end();
+    console.log('disconnect');
+  });
 });
 
-io.on('disconnecting', () => {
-  console.log('disconnecting');
-});
 
 // Endpoint to fetch stock data
 app.get('/api/stockData/:symbol/:timeframe', async (req, res) => {
@@ -140,7 +142,7 @@ app.get('/api/stockData/:symbol/:timeframe', async (req, res) => {
   });
   
   chart.onUpdate(async () => {
-    console.log(chart.infos.name);
+    // console.log(chart.infos.name);
     // console.log(chart.periods);
       res.send(chart.periods);
       client.end();

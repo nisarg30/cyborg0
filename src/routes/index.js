@@ -204,6 +204,14 @@ router.post('/limit', verifyTokenFirst ,async function(req, res, next) {
 	res.status(200).send(x);
 });
 
+router.post('/deleteopenrder', verifyTokenFirst, async (req, res) => {
+	try {
+		
+	} catch (error) {
+		
+	}
+})
+
 router.post('/addstocktowatchlist', verifyTokenFirst ,async function(req, res, next) {
 	const username = req.session.userId;
 	const watchlistname = req.body.watchlistname;
