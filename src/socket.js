@@ -5,6 +5,24 @@ const spp = require('./models/stockprice.js');  // Ensure this path matches your
 let io;
 let userSocketMap = {};  // Maps usernames to socket IDs
 
+function fetchAndUpdateStockPrice(stockname, socket) {
+    spp.findOne({ stockname : stockname }, (err, doc) => {
+        console.log(doc);
+        if (err) {
+            console.error('Error fetching stock data:', err);
+            return;
+        }
+        if (doc) {
+            socket.emit('update', {
+                stock: doc.stockname,
+                price: doc.currentprice,
+                open : doc.close
+            });
+        } else {
+            console.log('No document found for', stockname);
+        }
+    });
+}
 // Middleware to authenticate the token and attach username to the socket
 function authenticateToken(socket, next) {
     const token = socket.handshake.auth.token; 
@@ -95,25 +113,7 @@ function initSocket(server) {
     });
 }
 
-// Utility function to fetch and update stock price, emitting to room
-function fetchAndUpdateStockPrice(stockname, socket) {
-    spp.findOne({ stockname : stockname }, (err, doc) => {
-        console.log(doc);
-        if (err) {
-            console.error('Error fetching stock data:', err);
-            return;
-        }
-        if (doc) {
-            socket.emit('update', {
-                stock: doc.stockname,
-                price: doc.currentprice,
-                open : doc.close
-            });
-        } else {
-            console.log('No document found for', stockname);
-        }
-    });
-}
+// Utility function to fetch and update stock price, emitting to roo
 
 // Access Socket.IO instance
 function getIO() {

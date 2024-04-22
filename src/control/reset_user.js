@@ -8,6 +8,7 @@ module.exports = async function reset_user(req, res){
     try{
         const userdata = await Users.findOne( { username : req.session.userId} );
         console.log(userdata)
+        
         if(userdata.limitcount > 0){
             return res.send({ success : 1003 });
         }

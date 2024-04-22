@@ -109,7 +109,7 @@ module.exports = async function (req, res) {
                         dlog: [{
                             date: new Date().toLocaleDateString(),
                             ex_price: exPrice,
-                            direction: 1,
+                            direction: 0,
                             quantity: quantity
                         }]
                     });
@@ -118,7 +118,7 @@ module.exports = async function (req, res) {
                     stockLog.dlog.push({
                         date: new Date().toLocaleDateString(),
                         ex_price: exPrice,
-                        direction: 1,
+                        direction: 0,
                         quantity: quantity
                     });
                 }

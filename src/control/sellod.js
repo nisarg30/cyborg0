@@ -72,7 +72,7 @@ module.exports = async (req, res) => {
                     stockLog.dlog.push({
                         date: new Date().toLocaleDateString(),
                         ex_price: exPrice,
-                        direction: 1,
+                        direction: 0,
                         quantity: quantity
                     });
                 }

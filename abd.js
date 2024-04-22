@@ -63,7 +63,6 @@ function flushBulkOperations() {
 async function receiveTick(data) {
 //   console.log(data);
     if (data.token !== undefined) {
-        console.log(data);
         const tokenWithQuotes = data.token;
         const tokenWithoutQuotes = tokenWithQuotes.replace(/['"]+/g, '');
         const price = parseInt(data.last_traded_price, 10) / 100;
@@ -84,6 +83,7 @@ async function receiveTick(data) {
 
         console.log(tokent_to_stock[tokenWithoutQuotes], price);
         limit_execution(tokent_to_stock[tokenWithoutQuotes]).then(() => {
+            console.log("limit ecec : ", tokent_to_stock[tokenWithoutQuotes]);
         });
 
         // Prepare update operation for bulk writing
@@ -120,9 +120,9 @@ async function handleTokens(tokens) {
   const sessionData = await createSession();
   const firstBatch = tokens.slice(0, 1000);
   const secondBatch = tokens.slice(1000,);
-//   setupWebSocket(firstBatch, sessionData);
-//   setupWebSocket(secondBatch, sessionData);
-    setupWebSocket(['26000','26009','2885'],sessionData)
+  setupWebSocket(firstBatch, sessionData);
+  setupWebSocket(secondBatch, sessionData);
+    // setupWebSocket(['26000','26009','2885'],sessionData)
 }
 
 
