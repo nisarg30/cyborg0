@@ -1,11 +1,11 @@
 const { SmartAPI, WebSocketV2 } = require('smartapi-javascript');
 const mongoose = require('mongoose');
-const spp = require('./src/models/stockprice.js');
+const spp = require('../models/stockprice.js');
 const auth = require('otplib');
-const tokent_to_stock = require('./x.json');
+const tokent_to_stock = require('../../x.json');
 const fs = require('fs');
-const { getIO } = require('./src/socket.js');
-const limit_execution = require('./src/utls/limitexe.js');
+const { getIO } = require('../socket.js');
+const limit_execution = require('./limitexe.js');
 
 var io;
 // Common WebSocket configuration

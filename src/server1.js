@@ -12,7 +12,7 @@ var cors = require('cors');
 const fs = require('fs');
 const crypto = require('crypto');
 const abc = require('../abc.js');
-const abd = require('../abd.js');
+const abd = require('./utls/abd.js');
 
 const http = require('http');
 const { initSocket } = require('./socket.js');
