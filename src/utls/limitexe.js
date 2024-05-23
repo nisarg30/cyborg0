@@ -5,10 +5,9 @@ const sell_post = require('./sell_post');
 const moment = require('moment-timezone');
 
 module.exports = async function limit_execution(stockname) {
+    if (!stockname) return;
 
-    if(stockname == undefined ) return;
-        console.log(stockname);
-    // stockname = stockname.toUpperCase();
+    console.log(stockname);
     let fetchResult = await fetch123(stockname);
     const minExPrice = Math.min(fetchResult.curr, fetchResult.prev);
     const maxExPrice = Math.max(fetchResult.curr, fetchResult.prev);
@@ -19,37 +18,40 @@ module.exports = async function limit_execution(stockname) {
     console.log(timeString);
     let limitData = await limit.aggregate([
         { $match: { 'stockname': stockname } },
-        { $project: {
-            log: {
-                $filter: {
-                    input: '$log',
-                    as: 'item',
-                    cond: {
-                        $and: [
-                            { $lte: ['$$item.time', timeString] },
-                            { $gte: ['$$item.exprice', minExPrice] },
-                            { $lte: ['$$item.exprice', maxExPrice] }
-                        ]
+        {
+            $project: {
+                log: {
+                    $filter: {
+                        input: '$log',
+                        as: 'item',
+                        cond: {
+                            $and: [
+                                { $lte: ['$$item.time', timeString] },
+                                { $gte: ['$$item.exprice', minExPrice] },
+                                { $lte: ['$$item.exprice', maxExPrice] }
+                            ]
+                        }
                     }
                 }
             }
-        }}
+        }
     ]);
-    
 
     console.log(limitData);
 
     if (!limitData || limitData.length === 0) {
         return;
     }
-    
+
     await limit.updateMany(
         { stockname: stockname },
         { $pull: { log: { exprice: { $gte: minExPrice, $lte: maxExPrice }, time: { $lte: timeString } } } }
     );
 
-    // Assuming we have data and each item has `log` which is not empty.
     const logs = limitData[0].log || [];
+    const buyOrders = [];
+    const sellOrders = [];
+
     for (let i = 0; i < logs.length; i++) {
         const log = logs[i];
         const order = {
@@ -62,21 +64,23 @@ module.exports = async function limit_execution(stockname) {
             direction: log.direction
         };
 
-        console.log(order);
-        
-        try {
-            if (order.direction === 0) {
-                buy_post(order).then((error) => {
-                    if(error) console.log(error);
-                }) 
-            } else {
-                sell_post(order).then((error) => { 
-                    if(error) console.log(error);                    
-                });
-            } 
-        } catch (error) {
-            console.error('Error processing order:', error);
+        if (order.direction === 0) {
+            buyOrders.push(order);
+        } else {
+            sellOrders.push(order);
         }
     }
+
+    try {
+        if (buyOrders.length > 0) {
+            await buy_post(buyOrders);
+        }
+        if (sellOrders.length > 0) {
+            await sell_post(sellOrders);
+        }
+    } catch (error) {
+        console.error('Error processing orders:', error);
+    }
+
     return;
 }
