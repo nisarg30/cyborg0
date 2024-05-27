@@ -68,7 +68,7 @@ const express = require('express');
 const TradingView = require('@mathieuc/tradingview');
 const cors = require('cors');
 const app = express();
-const port = 3001;
+const port = 4001;
 var mongoose = require('mongoose');
 const spp = require('./src/models/stockprice.js');
 
@@ -144,6 +144,31 @@ app.get('/api/stockData/:symbol/:timeframe', async (req, res) => {
   chart.onUpdate(async () => {
     // console.log(chart.infos.name);
     // console.log(chart.periods);
+      res.send(chart.periods);
+      client.end();
+  });
+  return;
+});
+
+app.get('/api/stockData/:symbol/:timeframe/:time', async (req, res) => {
+  const symbol = req.params.symbol;
+  const timeframe = req.params.timeframe;
+  const time = req.params.time;
+  const market = `NSE:${symbol}`;
+
+  const client = new TradingView.Client
+  const chart = new client.Session.Chart();
+  chart.setTimezone('Asia/Kolkata');
+
+  chart.setMarket(market, {
+    timeframe: timeframe,
+    range: 100,
+    time : 1716803940
+  });
+  
+  chart.onUpdate(async () => {
+    // console.log(chart.infos.name);
+    console.log(chart.periods[0]);
       res.send(chart.periods);
       client.end();
   });

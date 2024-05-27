@@ -46,11 +46,11 @@ async function setupWebSocket(array, data) {
     }
 }
 
-const BULK_UPDATE_SIZE = 100; // Number of updates before a bulk operation is triggered
+const BULK_UPDATE_SIZE = 100; 
 let bulkOperations = [];
 let bulkTimer = null;
 let pendingStocks = new Set();
-const BATCH_INTERVAL = 5000; // 5 seconds
+const BATCH_INTERVAL = 5000; 
 
 function flushBulkOperations() {
     if (bulkOperations.length > 0) {
@@ -78,9 +78,11 @@ async function receiveTick(data) {
         });
 
         io.of('/general').to(tokent_to_stock[tokenWithoutQuotes]).emit('update', {
+            exchange_timestamp : data.exchange_timestamp,
             stock: stockname,
             price: price,
-            open: close
+            open: close,
+            vol_traded : data.vol_traded,
         });
 
         console.log(tokent_to_stock[tokenWithoutQuotes], price);

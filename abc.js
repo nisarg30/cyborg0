@@ -8,7 +8,7 @@ const limit_execution = require('./src/utls/limitexe.js');
 const fs = require('fs');
 
 
-const { getIO } = require('./src/socket.js');
+// const { getIO } = require('./src/socket.js');
 
 async function aaaa(){
   let smart_api = new SmartAPI({
@@ -57,18 +57,18 @@ function abd(array, data) {
     var x = 0;
     async function receiveTick(data) {
       if (data.token !== undefined) {
-        
-        const io = getIO();
+        console.log(data);
+        // const io = getIO();
         // const tokenWithQuotes = data.token;
         // const tokenWithoutQuotes = tokenWithQuotes.replace(/['"]+/g, '');
         
         const price = parseInt(data.last_traded_price, 10) / 100;
-        console.log(data.token, price);
+        // console.log(data.token, price);
         // console.log(tokent_to_stock[tokenWithoutQuotes],price);
-        if(price == 0) {
-          x++;
-          console.log(x);
-        }
+        // if(price == 0) {
+        //   x++;
+        //   console.log(x);
+        // }
           // io.to(tokent_to_stock[tokenWithoutQuotes]).emit('update', {
           //   stock: tokent_to_stock[tokenWithoutQuotes],
           //   price: price
@@ -87,3 +87,5 @@ function abd(array, data) {
     }
   });
 }
+
+getConnection();

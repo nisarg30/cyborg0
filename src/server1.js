@@ -13,6 +13,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const abc = require('../abc.js');
 const abd = require('./utls/abd.js');
+const TradingView = require('@mathieuc/tradingview')
 
 const http = require('http');
 const { initSocket } = require('./socket.js');
@@ -41,25 +42,65 @@ db.once('open', function () {});
 
 app.use(cors());
 
-app.use(session({
-  secret: 'work hard',
-  resave: true,
-  saveUninitialized: false,
-  store: new MongoStore({
-    mongooseConnection: db
-  })
-}));
-
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'ejs');
-
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
-app.use(express.static(__dirname + '/views'));
+// Endpoint to fetch stock data
+app.get('/api/stockData/:symbol/:timeframe', async (req, res) => {
+  console.log('req');
+  const symbol = req.params.symbol;
+  const timeframe = req.params.timeframe;
+  const market = `NSE:${symbol}`;
 
-var index = require('./routes/index');
-app.use('/', index);
+  const client = new TradingView.Client
+  const chart = new client.Session.Chart();
+  chart.setTimezone('Asia/Kolkata');
+
+  chart.setMarket(market, {
+    timeframe: timeframe,
+    range: 200,
+  });
+  
+  chart.onUpdate(async () => {
+    // console.log(chart.infos.name);
+    // console.log(chart.periods);
+      res.send(chart.periods);
+      client.end();
+  });
+  return;
+});
+
+app.get('/api/stockData/:symbol/:timeframe/:time', async (req, res) => {
+  console.log('req');
+  const symbol = req.params.symbol;
+  const timeframe = req.params.timeframe;
+  const time = req.params.time/1000;
+  const market = `NSE:${symbol}`;
+
+  const client = new TradingView.Client
+  const chart = new client.Session.Chart();
+  chart.setTimezone('Asia/Kolkata');
+
+  chart.setMarket(market, {
+    timeframe: timeframe,
+    range: 100,
+    to : time
+  });
+  
+  chart.onUpdate(async () => {
+    // console.log(chart.infos.name);
+    console.log(chart.periods[0]);
+      res.send(chart.periods);
+      client.end();
+  });
+  return;
+});
+
+app.get('/data', async (req, res) => {
+  console.log('req')
+  var array = await spp.find({});
+  res.send(array);
+})
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
