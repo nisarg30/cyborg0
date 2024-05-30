@@ -6,6 +6,7 @@ const tokent_to_stock = require('../../x.json');
 const fs = require('fs');
 const { getIO } = require('../socket.js');
 const limit_execution = require('./limitexe.js');
+const moment = require('moment');
 
 var io;
 // Common WebSocket configuration
@@ -63,58 +64,64 @@ function flushBulkOperations() {
 }
 
 async function receiveTick(data) {
-    if (data.token !== undefined) {
-        const tokenWithQuotes = data.token;
-        const tokenWithoutQuotes = tokenWithQuotes.replace(/['"]+/g, '');
-        const price = parseInt(data.last_traded_price, 10) / 100;
-        const close = parseInt(data.close_price, 10) / 100;
-        const stockname = tokent_to_stock[tokenWithoutQuotes];
+    const now = moment();
+    const startTime = moment({ hour: 9, minute: 15 });
+    const endTime = moment({ hour: 15, minute: 30 });
 
-        // Emit socket message
-        io.of('/auth').to(tokent_to_stock[tokenWithoutQuotes]).emit('update', {
-            stock: stockname,
-            price: price,
-            open: close
-        });
+    if (now.isBetween(startTime, endTime)) {
+        if (data.token !== undefined) {
+            const tokenWithQuotes = data.token;
+            const tokenWithoutQuotes = tokenWithQuotes.replace(/['"]+/g, '');
+            const price = parseInt(data.last_traded_price, 10) / 100;
+            const close = parseInt(data.close_price, 10) / 100;
+            const stockname = tokent_to_stock[tokenWithoutQuotes];
 
-        io.of('/general').to(tokent_to_stock[tokenWithoutQuotes]).emit('update', {
-            exchange_timestamp : data.exchange_timestamp,
-            stock: stockname,
-            price: price,
-            open: close,
-            vol_traded : data.vol_traded,
-        });
+            // Emit socket message
+            io.of('/auth').to(tokent_to_stock[tokenWithoutQuotes]).emit('update', {
+                stock: stockname,
+                price: price,
+                open: close
+            });
 
-        console.log(tokent_to_stock[tokenWithoutQuotes], price);
+            io.of('/general').to(tokent_to_stock[tokenWithoutQuotes]).emit('update', {
+                exchange_timestamp : data.exchange_timestamp,
+                stock: stockname,
+                price: price,
+                open: close,
+                vol_traded : data.vol_traded,
+            });
 
-        // Add stock to the pending set
-        pendingStocks.add(stockname);
+            console.log(tokent_to_stock[tokenWithoutQuotes], price);
 
-        // Prepare update operation for bulk writing
-        bulkOperations.push({
-            updateOne: {
-                filter: { token: tokenWithoutQuotes },
-                update: [{
-                    $set: {
-                        previousprice: "$currentprice",  // This now correctly references the field
-                        currentprice: price,
-                        close: close
-                    }
-                }]
-            }
-        });
+            // Add stock to the pending set
+            pendingStocks.add(stockname);
 
-        // Check if it's time to flush the bulk operations
-        if (bulkOperations.length >= BULK_UPDATE_SIZE) {
-            flushBulkOperations();
-        }
+            // Prepare update operation for bulk writing
+            bulkOperations.push({
+                updateOne: {
+                    filter: { token: tokenWithoutQuotes },
+                    update: [{
+                        $set: {
+                            previousprice: "$currentprice",  // This now correctly references the field
+                            currentprice: price,
+                            close: close
+                        }
+                    }]
+                }
+            });
 
-        // Optionally set a timer to flush operations at least every few seconds
-        if (!bulkTimer) {
-            bulkTimer = setTimeout(() => {
+            // Check if it's time to flush the bulk operations
+            if (bulkOperations.length >= BULK_UPDATE_SIZE) {
                 flushBulkOperations();
-                bulkTimer = null;
-            }, 1000);  // Adjust time to balance between performance and real-time requirement
+            }
+
+            // Optionally set a timer to flush operations at least every few seconds
+            if (!bulkTimer) {
+                bulkTimer = setTimeout(() => {
+                    flushBulkOperations();
+                    bulkTimer = null;
+                }, 1000);  // Adjust time to balance between performance and real-time requirement
+            }
         }
     }
 }
