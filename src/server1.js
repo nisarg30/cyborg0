@@ -6,12 +6,7 @@ var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 var session = require('express-session');
 var MongoStore = require('connect-mongo')(session);
-var request = require('request-promise');
-var cron = require("node-cron");
 var cors = require('cors');
-const fs = require('fs');
-const crypto = require('crypto');
-const abc = require('../abc.js');
 const abd = require('./utls/abd.js');
 const TradingView = require('@mathieuc/tradingview')
 
@@ -23,7 +18,7 @@ const server = http.createServer(app);
 initSocket(server);
 
 mongoose.set("strictQuery", false);
-mongoose.connect('mongodb+srv://nisargpatel0466:nn__4569@cluster0.lsqbqko.mongodb.net/cyborg0?retryWrites=true&w=majority', {
+mongoose.connect(`mongodb+srv://${process.env.use}:${process.env.pass}@cluster0.lsqbqko.mongodb.net/cyborg0?retryWrites=true&w=majority`, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }, (err) => {
@@ -133,7 +128,7 @@ app.use(function (err, req, res, next) {
   res.send(err.message);
 });
 
-const PORT = 4002;
+const PORT = process.env.PORT || 4002;
 server.listen(PORT, function () {
   console.log('Server is started on http://127.0.0.0:' + PORT);
 });

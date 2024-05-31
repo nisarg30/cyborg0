@@ -15,7 +15,7 @@ const crypto = require('crypto');
 const http = require('http');
 
 mongoose.set("strictQuery", false);
-mongoose.connect('mongodb+srv://nisargpatel0466:nn__4569@cluster0.lsqbqko.mongodb.net/cyborg0?retryWrites=true&w=majority', {
+mongoose.connect(`mongodb+srv://${process.env.use}:${process.env.pass}@cluster0.lsqbqko.mongodb.net/cyborg0?retryWrites=true&w=majority`, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }, (err) => {
@@ -106,15 +106,19 @@ cron.schedule("00 16 * * 1-5", function () {
   requestschedule2();
 });
 
-cron.schedule("00 12 * * 0", function () {
+function rotateSecretKey() {
+  let envContent = fs.readFileSync('.env', 'utf-8');
   const newSecretKey = crypto.randomBytes(32).toString('hex');
-  const envContent = `SECRET_KEY=${newSecretKey}`;
-  fs.writeFileSync('.env', envContent);
-
+  const newEnvContent = envContent.replace(/secret_key=.*/, `secret_key=${newSecretKey}`);
+  fs.writeFileSync('.env', newEnvContent, 'utf-8');
+  
   console.log('Secret key rotated successfully.');
-});
+}
+
+cron.schedule('00 12 * * 0', rotateSecretKey);
 
 const PORT = process.env.PORT || 4000;
+
 server.listen(PORT, function () {
   console.log('Server is started on http://127.0.0.0:' + PORT);
 });
