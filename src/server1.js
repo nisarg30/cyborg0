@@ -42,8 +42,25 @@ db.once('open', function () {});
 
 app.use(cors());
 
+app.use(session({
+  secret: 'work hard',
+  resave: true,
+  saveUninitialized: false,
+  store: new MongoStore({
+    mongooseConnection: db
+  })
+}));
+
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+
+app.use(express.static(__dirname + '/views'));
+
+var index = require('./routes/index');
+app.use('/', index);
 
 // Endpoint to fetch stock data
 app.get('/api/stockData/:symbol/:timeframe', async (req, res) => {
