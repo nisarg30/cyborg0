@@ -17,29 +17,29 @@ const deleteuser = require('../control/delete_user');
 require('dotenv').config()
 
 //login routes
-const verifyToken = (req, res, next) => {
-    const token = req.body.token;
-    if (!token) {
-        return res.status(401).json({ message: 'No token provided' });
-    }
+// const verifyToken = (req, res, next) => {
+//     const token = req.body.token;
+//     if (!token) {
+//         return res.status(401).json({ message: 'No token provided' });
+//     }
 
-    jwt.verify(token, "36a4df6c92e79981ebd6ac4652a9d3695db3a0d3d062c76f4631a6b5098b6e47", (err, decoded) => {
-        if (err) {
-            return res.status(403).json({ message: 'Failed to authenticate token' });
-        }
-        next(); // Move to the next middleware
-    });
-};
+//     jwt.verify(token, "36a4df6c92e79981ebd6ac4652a9d3695db3a0d3d062c76f4631a6b5098b6e47", (err, decoded) => {
+//         if (err) {
+//             return res.status(403).json({ message: 'Failed to authenticate token' });
+//         }
+//         next(); // Move to the next middleware
+//     });
+// };
 
 const verifyTokenFirst = (req, res, next) => {
     const token = req.body.token;
-	console.log("verify token first : ", token );
+	// console.log("verify token first : ", token );
 	
     if (!token) {
         return res.status(401).json({ message: 'No token provided' });
     }
 
-    jwt.verify(token, "36a4df6c92e79981ebd6ac4652a9d3695db3a0d3d062c76f4631a6b5098b6e47", (err, decoded) => {
+    jwt.verify(token, process.env.secret_key, (err, decoded) => {
         if (err) {
             return res.status(403).json({ message: 'Failed to authenticate token' });
         }
@@ -56,13 +56,13 @@ router.post('/jwt', verifyTokenFirst,async function(req, res) {
 
 // Login route with JWT token generation
 router.post('/', function (req, res, next) {
-    console.log(req.body);
+    // console.log(req.body);
     Users.findOne({ username: req.body.username }, function (err, data) {
         if (data) {
             bcrypt.compare(req.body.password, data.password, function (err, result) {
                 if (result === true) {
 					console.log('abc');
-                    const token = jwt.sign({ _id: data.username }, "36a4df6c92e79981ebd6ac4652a9d3695db3a0d3d062c76f4631a6b5098b6e47");
+                    const token = jwt.sign({ _id: data.username }, process.env.secret_key);
 					req.session.userId = data.username;
                     res.cookie("jwt", token, data.watchlists);
                     res.status(200).send({ token, "success": "You are logged in now." , data : data.watchlists});
@@ -81,7 +81,7 @@ router.post('/', function (req, res, next) {
 
 router.post('/reg', async function(req, res, next) {
 	var personInfo = req.body;
-	console.log(personInfo);
+	// console.log(personInfo);
 	if(!personInfo.email || !personInfo.username || !personInfo.password){
 		res.send({ success : "missing info" });
 	} else {
@@ -137,13 +137,6 @@ router.post('/reg', async function(req, res, next) {
 			res.status(200).send({"Success":"You are regestered,You can login now."});
 		}
 });
-
-router.post('/data', async (req, res) => {
-	console.log('req')
-	var array = await spp.find({}, 'stockname');
-	// console.log(array);
-	res.send(array);
-})
 
 router.post('/market',verifyTokenFirst,async function(req, res) {
 	if(!req.session.userId)
@@ -204,13 +197,13 @@ router.post('/limit', verifyTokenFirst ,async function(req, res, next) {
 	res.status(200).send(x);
 });
 
-router.post('/deleteopenrder', verifyTokenFirst, async (req, res) => {
-	try {
+// router.post('/deleteopenrder', verifyTokenFirst, async (req, res) => {
+// 	try {
 		
-	} catch (error) {
+// 	} catch (error) {
 		
-	}
-})
+// 	}
+// })
 
 router.post('/addstocktowatchlist', verifyTokenFirst ,async function(req, res, next) {
 	const username = req.session.userId;

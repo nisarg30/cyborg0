@@ -24,7 +24,6 @@ mongoose.connect(`mongodb+srv://${process.env.use}:${process.env.pass}@cluster0.
 }, (err) => {
   if (!err) {
     console.log('MongoDB Connection Succeeded.');
-    // abc();
     abd();
   } else {
     console.log('Error in DB connection : ' + err);
