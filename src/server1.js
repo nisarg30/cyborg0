@@ -13,7 +13,6 @@ const spp = require('../src/models/limit.js')
 const http = require('http');
 const { initSocket } = require('./socket.js');
 
-
 const server = http.createServer(app);
 initSocket(server);
 
@@ -26,7 +25,7 @@ mongoose.connect(`mongodb+srv://${process.env.use}:${process.env.pass}@cluster0.
     console.log('MongoDB Connection Succeeded.');
     abd();
   } else {
-    console.log('Error in DB connection : ' + err);
+    console.error('Error in DB connection:', err);
   }
 });
 
@@ -51,66 +50,73 @@ app.set('view engine', 'ejs');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
-app.use(express.static(__dirname + '/views'));
+app.use(express.static(path.join(__dirname, 'views')));
 
 var index = require('./routes/index');
 app.use('/', index);
 
 // Endpoint to fetch stock data
-app.get('/api/stockData/:symbol/:timeframe', async (req, res) => {
-  console.log('req');
-  const symbol = req.params.symbol;
-  const timeframe = req.params.timeframe;
-  const market = `NSE:${symbol}`;
+app.get('/api/stockData/:symbol/:timeframe', async (req, res, next) => {
+  try {
+    console.log('req');
+    const symbol = req.params.symbol;
+    const timeframe = req.params.timeframe;
+    const market = `NSE:${symbol}`;
 
-  const client = new TradingView.Client
-  const chart = new client.Session.Chart();
-  chart.setTimezone('Asia/Kolkata');
+    const client = new TradingView.Client();
+    const chart = new client.Session.Chart();
+    chart.setTimezone('Asia/Kolkata');
 
-  chart.setMarket(market, {
-    timeframe: timeframe,
-    range: 200,
-  });
-  
-  chart.onUpdate(async () => {
-    // console.log(chart.infos.name);
-    // console.log(chart.periods);
+    chart.setMarket(market, {
+      timeframe: timeframe,
+      range: 200,
+    });
+
+    chart.onUpdate(async () => {
       res.send(chart.periods);
       client.end();
-  });
-  return;
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
-app.get('/api/stockData/:symbol/:timeframe/:time', async (req, res) => {
-  console.log('req');
-  const symbol = req.params.symbol;
-  const timeframe = req.params.timeframe;
-  const time = req.params.time/1000;
-  const market = `NSE:${symbol}`;
+app.get('/api/stockData/:symbol/:timeframe/:time', async (req, res, next) => {
+  try {
+    console.log('req');
+    const symbol = req.params.symbol;
+    const timeframe = req.params.timeframe;
+    const time = req.params.time / 1000;
+    const market = `NSE:${symbol}`;
 
-  const client = new TradingView.Client
-  const chart = new client.Session.Chart();
-  chart.setTimezone('Asia/Kolkata');
+    const client = new TradingView.Client();
+    const chart = new client.Session.Chart();
+    chart.setTimezone('Asia/Kolkata');
 
-  chart.setMarket(market, {
-    timeframe: timeframe,
-    range: 100,
-    to : time
-  });
-  
-  chart.onUpdate(async () => {
-    // console.log(chart.infos.name);
-    console.log(chart.periods[0]);
+    chart.setMarket(market, {
+      timeframe: timeframe,
+      range: 100,
+      to: time
+    });
+
+    chart.onUpdate(async () => {
+      console.log(chart.periods[0]);
       res.send(chart.periods);
       client.end();
-  });
-  return;
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
-app.get('/data', async (req, res) => {
-  console.log('req')
-  var array = await spp.find({});
-  res.send(array);
+app.get('/data', async (req, res, next) => {
+  try {
+    console.log('req')
+    var array = await spp.find({});
+    res.send(array);
+  } catch (err) {
+    next(err);
+  }
 })
 
 // catch 404 and forward to error handler
@@ -120,15 +126,16 @@ app.use(function (req, res, next) {
   next(err);
 });
 
-// error handler
-// define as the last app.use callback
+// global error handler
 app.use(function (err, req, res, next) {
-  res.status(err.status || 500);
-  res.send(err.message);
+  console.error(err.stack); // log the error stack for debugging
+  res.status(err.status || 500).send({
+    message: err.message,
+    error: process.env.NODE_ENV === 'development' ? err : {}
+  });
 });
 
 const PORT = process.env.PORT || 4002;
 server.listen(PORT, function () {
-  console.log('Server is started on http://127.0.0.0:' + PORT);
+  console.log('Server is started on http://127.0.0.1:' + PORT);
 });
-
