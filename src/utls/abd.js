@@ -7,19 +7,20 @@ const fs = require('fs');
 const { getIO } = require('../socket.js');
 const limit_execution = require('./limitexe.js');
 const moment = require('moment');
+require('dotenv').config();
 
 var io;
 // Common WebSocket configuration
 const websocketConfig = {
-    apikey: 'TUlICC4Y',
-    clientcode: "G222234",
+    apikey: process.env.apikey,
+    clientcode: process.env.client,
 };
 
 async function createSession() {
-    const smart_api = new SmartAPI({ api_key: 'TUlICC4Y' });
-    const secret = 'TYNM4D6BQVQL63C6G3CISPCUOI';
+    const smart_api = new SmartAPI({ api_key: process.env.apikey });
+    const secret = process.env.see;
     const token = auth.authenticator.generate(secret);
-    const session = await smart_api.generateSession('G222234', '2580', token);
+    const session = await smart_api.generateSession(process.env.client, process.env.passc, token);
     return session.data;
 }
 
@@ -64,7 +65,7 @@ function flushBulkOperations() {
 }
 
 async function receiveTick(data) {
-    const now = moment();
+    const now = moment().tz('Asia/Kolkata');
     const startTime = moment({ hour: 9, minute: 15 });
     const endTime = moment({ hour: 15, minute: 30 });
 
