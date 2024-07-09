@@ -65,11 +65,11 @@ function flushBulkOperations() {
 }
 
 async function receiveTick(data) {
-    const now = moment().tz('Asia/Kolkata');
-    const startTime = moment({ hour: 9, minute: 15 });
-    const endTime = moment({ hour: 15, minute: 30 });
+    // const now = moment().tz('Asia/Kolkata');
+    // const startTime = moment({ hour: 9, minute: 15 });
+    // const endTime = moment({ hour: 15, minute: 30 });
 
-    if (now.isBetween(startTime, endTime)) {
+    // if (now.isBetween(startTime, endTime)) {
         if (data.token !== undefined) {
             const tokenWithQuotes = data.token;
             const tokenWithoutQuotes = tokenWithQuotes.replace(/['"]+/g, '');
@@ -124,7 +124,7 @@ async function receiveTick(data) {
                 }, 1000);  // Adjust time to balance between performance and real-time requirement
             }
         }
-    }
+    // }
 }
 
 // Set up an interval to process pending stocks every 5 seconds
